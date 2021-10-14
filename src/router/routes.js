@@ -4,7 +4,7 @@ const routes = [
     component: () => import("layouts/MainLayout.vue"),
     children: [
       { path: "", component: () => import("pages/About.vue") },
-      { path: "/map", component: () => import("pages/Map.vue") },
+      { path: "/map", component: () => import("src/pages/WebGIS.vue") },
     ],
   },
   // Always leave this as last one,

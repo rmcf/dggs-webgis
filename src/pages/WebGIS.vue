@@ -1,14 +1,17 @@
 <template>
-  <q-page>
-    <div class="text-h3 text-center">Map</div>
+  <q-page class="q-pt-lg">
+    <!-- map component -->
+    <div><Map /></div>
   </q-page>
 </template>
 
 <script>
-export default {
-  name: "Map",
+import Map from "components/Map.vue";
 
-  components: {},
+export default {
+  name: "Web-GIS",
+
+  components: { Map },
 
   data() {
     return {};

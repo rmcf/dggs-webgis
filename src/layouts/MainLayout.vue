@@ -33,7 +33,7 @@
             <q-icon name="info_outline" />
           </q-item-section>
 
-          <q-item-section>About</q-item-section>
+          <q-item-section>About project</q-item-section>
         </q-item>
 
         <q-item
@@ -49,7 +49,7 @@
             <q-icon name="public" />
           </q-item-section>
 
-          <q-item-section>Map</q-item-section>
+          <q-item-section>DGGS web-GIS</q-item-section>
         </q-item>
       </q-list>
       <!-- <q-list>
@@ -150,13 +150,9 @@ export default {
 
 <style lang="scss" scoped>
 .active-link {
-  background-color: $grey-3;
-  color: black;
+  background-color: $grey-2;
+  color: $amber-10;
 }
 </style>
 
-<style lang="scss">
-.q-page {
-  padding: 2rem;
-}
-</style>
+<style lang="scss"></style>
