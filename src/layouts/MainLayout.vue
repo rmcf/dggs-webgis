@@ -1,5 +1,6 @@
 <template>
   <q-layout view="hHh Lpr fFf">
+    <!-- navbar -->
     <q-header elevated class="bg-grey-1 text-grey-8">
       <q-toolbar>
         <q-btn
@@ -10,9 +11,7 @@
           aria-label="Menu"
           @click="leftDrawerOpen = !leftDrawerOpen"
         />
-
         <q-toolbar-title> DGGS web-GIS </q-toolbar-title>
-
         <div>SPA</div>
       </q-toolbar>
     </q-header>
@@ -20,6 +19,7 @@
     <!-- drawer -->
     <q-drawer v-model="leftDrawerOpen" show-if-above bordered>
       <q-list class="q-mt-lg">
+        <!-- page About link -->
         <q-item
           to="/"
           exact
@@ -32,12 +32,12 @@
           <q-item-section avatar>
             <q-icon name="info_outline" />
           </q-item-section>
-
           <q-item-section>About project</q-item-section>
         </q-item>
 
+        <!-- page DGGS web-GIS link -->
         <q-item
-          to="/map"
+          to="map"
           exact
           clickable
           v-ripple
@@ -48,21 +48,15 @@
           <q-item-section avatar>
             <q-icon name="public" />
           </q-item-section>
-
           <q-item-section>DGGS web-GIS</q-item-section>
         </q-item>
-      </q-list>
-      <!-- <q-list>
-        <q-item-label header> Essential Links </q-item-label>
 
-        <EssentialLink
-          v-for="link in essentialLinks"
-          :key="link.title"
-          v-bind="link"
-        />
-      </q-list> -->
+        <!-- layers list -->
+        <LayersList />
+      </q-list>
     </q-drawer>
 
+    <!-- page container -->
     <q-page-container>
       <router-view />
     </q-page-container>
@@ -70,60 +64,13 @@
 </template>
 
 <script>
-// import EssentialLink from "components/EssentialLink.vue";
-
-// const linksList = [
-//   {
-//     title: "Docs",
-//     caption: "quasar.dev",
-//     icon: "school",
-//     link: "https://quasar.dev",
-//   },
-//   {
-//     title: "Github",
-//     caption: "github.com/quasarframework",
-//     icon: "code",
-//     link: "https://github.com/quasarframework",
-//   },
-//   {
-//     title: "Discord Chat Channel",
-//     caption: "chat.quasar.dev",
-//     icon: "chat",
-//     link: "https://chat.quasar.dev",
-//   },
-//   {
-//     title: "Forum",
-//     caption: "forum.quasar.dev",
-//     icon: "record_voice_over",
-//     link: "https://forum.quasar.dev",
-//   },
-//   {
-//     title: "Twitter",
-//     caption: "@quasarframework",
-//     icon: "rss_feed",
-//     link: "https://twitter.quasar.dev",
-//   },
-//   {
-//     title: "Facebook",
-//     caption: "@QuasarFramework",
-//     icon: "public",
-//     link: "https://facebook.quasar.dev",
-//   },
-//   {
-//     title: "Quasar Awesome",
-//     caption: "Community Quasar projects",
-//     icon: "favorite",
-//     link: "https://awesome.quasar.dev",
-//   },
-// ];
-
-import { ref } from "vue";
+import LayersList from "components/LayersList.vue";
 
 export default {
   name: "MainLayout",
 
   components: {
-    // EssentialLink,
+    LayersList,
   },
 
   data() {
@@ -134,17 +81,21 @@ export default {
     };
   },
 
-  // setup() {
-  //   const leftDrawerOpen = ref(false);
+  watch: {
+    // watch for selected vector layers
+    layersSelectedVector(newValue, oldValue) {
+      this.addSelectedLayersVector(this.layersSelectedVector);
+    },
 
-  //   return {
-  //     essentialLinks: linksList,
-  //     leftDrawerOpen,
-  //     toggleLeftDrawer() {
-  //       leftDrawerOpen.value = !leftDrawerOpen.value;
-  //     },
-  //   };
-  // },
+    // watch for selected raster layers
+    layerSelectedRaster(newValue, oldValue) {
+      this.addSelectedLayersRaster(this.layerSelectedRaster);
+    },
+  },
+
+  methods: {},
+
+  computed: {},
 };
 </script>
 

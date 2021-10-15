@@ -1,6 +1,6 @@
 <template>
   <q-page class="q-pt-lg">
-    <!-- map component -->
+    <!-- map -->
     <div><Map /></div>
   </q-page>
 </template>
@@ -21,7 +21,15 @@ export default {
 
   methods: {},
 
-  computed: {},
+  computed: {
+    layersSelectedVectorComputed: function () {
+      return this.$store.state.layers.layersSelectedVector;
+    },
+
+    layerSelectedRasterComputed: function () {
+      return this.$store.state.layers.layerSelectedRaster;
+    },
+  },
 };
 </script>
 
