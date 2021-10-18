@@ -5,7 +5,10 @@
       <q-btn color="orange-6" @click="testFunction()">Test function</q-btn>
     </div> -->
     <div>Map zoom: {{ mapZoom }}</div>
-    <div>Map center: {{ mapCenterComputed }}</div>
+    <div>
+      Map center: {{ mapCenterComputed[0].toFixed(5) }},
+      {{ mapCenterComputed[1].toFixed(5) }}
+    </div>
     <div id="openmap" ref="map-gis" class="map-container"></div>
   </div>
 </template>
