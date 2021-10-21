@@ -11,3 +11,13 @@ export function SET_LAYERS_SELECTED_VECTOR(state, layers) {
 export function SET_LAYERS_SELECTED_RASTER(state, layer) {
   state.layerSelectedRaster = layer;
 }
+
+// set DGGS layers
+export function SET_LAYERS_DGGS(state, layers) {
+  state.layersDGGS = layers;
+}
+
+// set selected DGGS layers
+export function SET_LAYERS_SELECTED_DGGS(state, layers) {
+  state.layersSelectedDGGS = layers;
+}

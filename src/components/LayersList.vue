@@ -6,6 +6,31 @@
       leave-active-class="animated fadeOut"
     >
       <div v-if="currentRouterPath === '/map'">
+        <!-- list of DGGS layers -->
+        <div>
+          <q-list>
+            <q-item
+              v-for="layer in dggsLayers"
+              :key="layer.id"
+              tag="label"
+              v-ripple
+            >
+              <q-item-section avatar>
+                <q-checkbox
+                  v-model="layersSelectedDGGS"
+                  :val="layer"
+                  color="primary"
+                />
+              </q-item-section>
+              <q-item-section>
+                <q-item-label class="text-black">{{
+                  layer.title
+                }}</q-item-label>
+                <q-item-label caption>{{ layer.description }}</q-item-label>
+              </q-item-section>
+            </q-item>
+          </q-list>
+        </div>
         <!-- list of vector layers -->
         <div>
           <q-item
@@ -67,6 +92,8 @@ export default {
     return {
       layersSelectedVector: [],
       layerSelectedRaster: null,
+      layerDGGS: null,
+      layersSelectedDGGS: [],
     };
   },
 
@@ -80,6 +107,11 @@ export default {
     layerSelectedRaster(newValue, oldValue) {
       this.addSelectedLayersRaster(this.layerSelectedRaster);
     },
+
+    // watch for selected DGGS layers
+    layersSelectedDGGS(newValue, oldValue) {
+      this.addSelectedLayersDGGS(this.layersSelectedDGGS);
+    },
   },
 
   created() {
@@ -89,6 +121,7 @@ export default {
       return layer.id === "osm";
     });
     this.layerSelectedRaster = layerRasterDefault[0];
+    this.getDGGSlayersList();
   },
 
   methods: {
@@ -101,11 +134,49 @@ export default {
     addSelectedLayersRaster(selectedLayer) {
       this.$store.commit("layers/SET_LAYERS_SELECTED_RASTER", selectedLayer);
     },
+
+    // add selected DGGS layer to Vuex
+    addSelectedLayersDGGS(selectedLayers) {
+      this.$store.commit("layers/SET_LAYERS_SELECTED_DGGS", selectedLayers);
+    },
+
+    // add DGGS layers
+    addDGGSlayers(layers) {
+      this.$store.commit("layers/SET_LAYERS_DGGS", layers);
+    },
+
+    // get DGGS layers
+    getDGGSlayersList() {
+      this.loading = true;
+      let ref = this;
+      this.$axios
+        .get("https://dggs-api-bozea3cspa-ew.a.run.app/dggs-api/collections", {
+          params: {},
+          headers: {
+            "Content-Type": "application/json",
+          },
+        })
+        .then((response) => {
+          ref.addDGGSlayers(response.data["dggs-list"]);
+          this.loading = false;
+        })
+        .catch(function (error) {
+          this.loading = false;
+        });
+    },
   },
 
   computed: {
     layersAll: function () {
       return this.$store.state.layers.layersAll;
+    },
+
+    dggsLayers: function () {
+      return this.$store.state.layers.layersDGGS;
+    },
+
+    layerSelectedDGGS: function () {
+      return this.$store.state.layers.layerSelectedDGGS;
     },
 
     currentRouterPath: function () {

@@ -2,6 +2,8 @@ export default function () {
   return {
     layersSelectedVector: [],
     layerSelectedRaster: null,
+    layersSelectedDGGS: [],
+    layersDGGS: [],
     layersAll: [
       {
         id: "countries",
