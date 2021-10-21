@@ -1,0 +1,25 @@
+{
+  "type": "FeatureCollection",
+  "crs": {
+    "type": "name",
+    "properties": {
+      "name": "EPSG:3857"
+    }
+  },
+  "features": [
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [-5e6, -1e6],
+            [-3e6, -1e6],
+            [-4e6, 1e6],
+            [-5e6, -1e6]
+          ]
+        ]
+      }
+    }
+  ]
+}
