@@ -9,26 +9,42 @@
         <!-- list of DGGS layers -->
         <div>
           <q-list>
-            <q-item
-              v-for="layer in dggsLayers"
-              :key="layer.id"
-              tag="label"
-              v-ripple
-            >
-              <q-item-section avatar>
-                <q-checkbox
-                  v-model="layersSelectedDGGS"
-                  :val="layer"
-                  color="primary"
-                />
-              </q-item-section>
-              <q-item-section>
-                <q-item-label class="text-black">{{
-                  layer.title
-                }}</q-item-label>
-                <q-item-label caption>{{ layer.description }}</q-item-label>
-              </q-item-section>
-            </q-item>
+            <div v-for="layer in layersDGGS" :key="layer.id">
+              <!-- checkbox and label -->
+              <div>
+                <q-item tag="label" class="row items-start">
+                  <!-- checkbox -->
+                  <q-item-section avatar>
+                    <q-checkbox
+                      v-model="layersSelectedDGGS"
+                      :val="layer"
+                      color="primary"
+                    />
+                  </q-item-section>
+                  <!-- title and description -->
+                  <q-item-section>
+                    <q-item-label class="text-black">{{
+                      layer.title
+                    }}</q-item-label>
+                    <q-item-label caption>{{ layer.description }}</q-item-label>
+                  </q-item-section>
+                </q-item>
+              </div>
+              <!-- layer properties setting -->
+              <q-item class="row items-start">
+                <!-- level -->
+                <q-item-section avatar> </q-item-section>
+                <q-item-section
+                  ><div>
+                    <q-select
+                      dense
+                      outlined
+                      v-model="layer.level"
+                      :options="layer.resolutions"
+                      label="Level"
+                    /></div></q-item-section
+              ></q-item>
+            </div>
           </q-list>
         </div>
         <!-- list of vector layers -->
@@ -82,6 +98,61 @@
 
 <script>
 var filter = require("lodash.filter");
+var cloneDeep = require("lodash.clonedeep");
+
+const staticLayers = [
+  {
+    id: "countries",
+    title: "Countries of the World",
+    description: "List of all countries of the World from public source",
+    attributions: "",
+    url: "https://openlayers.org/en/latest/examples/data/geojson/countries.geojson",
+    type: "vector", // available values: vector, raster, wms, tms
+    format: "geojson",
+    projection: "EPSG:4326",
+  },
+  {
+    id: "osm",
+    title: "Open Street Map",
+    description:
+      "Collaborative project to create a free editable geographic database of the world",
+    attributions: "",
+    url: "https://{a-c}.tile.openstreetmap.org/{z}/{x}/{y}.png",
+    type: "raster", // available values: vector, raster, wms, tms
+    format: "png",
+    projection: "EPSG:4326",
+  },
+  {
+    id: "wikimedia",
+    title: "Wikimedia maps",
+    description: "A general colour map wikimedia maps",
+    attributions: "",
+    url: "https://maps.wikimedia.org/osm-intl/{z}/{x}/{y}.png",
+    type: "raster", // available values: vector, raster, wms, tms
+    format: "png",
+    projection: "EPSG:4326",
+  },
+  {
+    id: "cartodb",
+    title: "CartoDB Light",
+    description: "Good for sticking color star ratings over the top of.",
+    attributions: "",
+    url: "https://{a-c}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}.png",
+    type: "raster", // available values: vector, raster, wms, tms
+    format: "png",
+    projection: "EPSG:4326",
+  },
+  {
+    id: "argistopomap",
+    title: "ArcGIS World Topo Map",
+    description: "ArcGIS REST tile services are supported by ol/source/XYZ",
+    attributions: "",
+    url: "https://server.arcgisonline.com/ArcGIS/rest/services/World_Topo_Map/MapServer/tile/{z}/{y}/{x}",
+    type: "raster", // available values: vector, raster, wms, tms
+    format: "png",
+    projection: "EPSG:4326",
+  },
+];
 
 export default {
   name: "LayersList",
@@ -90,9 +161,10 @@ export default {
 
   data() {
     return {
-      layersSelectedVector: [],
+      layersAll: staticLayers,
+      layersDGGS: [],
       layerSelectedRaster: null,
-      layerDGGS: null,
+      layersSelectedVector: [],
       layersSelectedDGGS: [],
     };
   },
@@ -109,15 +181,18 @@ export default {
     },
 
     // watch for selected DGGS layers
-    layersSelectedDGGS(newValue, oldValue) {
-      this.addSelectedLayersDGGS(this.layersSelectedDGGS);
+    layersSelectedDGGS: {
+      handler(newValue, oldValue) {
+        let selectedDGGSlayers = cloneDeep(this.layersSelectedDGGS);
+        this.addSelectedLayersDGGS(selectedDGGSlayers);
+      },
+      deep: true,
     },
   },
 
   created() {
     // set default raster layer
-    let layers = this.$store.state.layers.layersAll;
-    let layerRasterDefault = filter(layers, function (layer) {
+    let layerRasterDefault = filter(this.layersAll, function (layer) {
       return layer.id === "osm";
     });
     this.layerSelectedRaster = layerRasterDefault[0];
@@ -125,24 +200,19 @@ export default {
   },
 
   methods: {
-    // add selected vector layers to Vuex
-    addSelectedLayersVector(selectedLayers) {
-      this.$store.commit("layers/SET_LAYERS_SELECTED_VECTOR", selectedLayers);
-    },
-
     // add selected raster layers to Vuex
     addSelectedLayersRaster(selectedLayer) {
       this.$store.commit("layers/SET_LAYERS_SELECTED_RASTER", selectedLayer);
     },
 
+    // add selected vector layers to Vuex
+    addSelectedLayersVector(selectedLayers) {
+      this.$store.commit("layers/SET_LAYERS_SELECTED_VECTOR", selectedLayers);
+    },
+
     // add selected DGGS layer to Vuex
     addSelectedLayersDGGS(selectedLayers) {
       this.$store.commit("layers/SET_LAYERS_SELECTED_DGGS", selectedLayers);
-    },
-
-    // add DGGS layers
-    addDGGSlayers(layers) {
-      this.$store.commit("layers/SET_LAYERS_DGGS", layers);
     },
 
     // get DGGS layers
@@ -157,7 +227,12 @@ export default {
           },
         })
         .then((response) => {
-          ref.addDGGSlayers(response.data["dggs-list"]);
+          let layers = response.data["dggs-list"];
+          layers.forEach((layer, i, arr) => {
+            layer.level = "3";
+            layer.zIndex = i + 2;
+            ref.layersDGGS = layers;
+          });
           this.loading = false;
         })
         .catch(function (error) {
@@ -167,18 +242,6 @@ export default {
   },
 
   computed: {
-    layersAll: function () {
-      return this.$store.state.layers.layersAll;
-    },
-
-    dggsLayers: function () {
-      return this.$store.state.layers.layersDGGS;
-    },
-
-    layerSelectedDGGS: function () {
-      return this.$store.state.layers.layerSelectedDGGS;
-    },
-
     currentRouterPath: function () {
       return this.$route.path;
     },

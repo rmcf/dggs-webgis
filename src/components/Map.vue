@@ -6,10 +6,11 @@
         Map center: {{ mapCenterComputed[0].toFixed(5) }},
         {{ mapCenterComputed[1].toFixed(5) }}
       </div>
+      <div>
+        Hexagons quantity: {{ featuresQuantity }} at Level: {{ layerLevel }}
+      </div>
     </div>
-    <div class="q-mb-md">
-      DGGS layer seleted: {{ layerSelectedDGGSComputed }}
-    </div>
+
     <!-- <div class="q-mb-md">DGGS layers features {{ dggsLayersFeatures }}</div> -->
     <div id="openmap" ref="map-gis" class="map-container"></div>
   </div>
@@ -45,6 +46,8 @@ export default {
       layers: [],
       dggsLayersFeatures: [],
       extent: null,
+      featuresQuantity: 0,
+      layerLevel: 0,
     };
   },
 
@@ -59,7 +62,6 @@ export default {
     },
 
     layerSelectedDGGSComputed(newValue, oldValue) {
-      console.log("DGGS changed");
       this.createMap();
     },
   },
@@ -74,8 +76,6 @@ export default {
       document.getElementById("openmap").innerHTML = "";
       // clean layers list
       this.layers = [];
-      // remove features
-      this.dggsLayersFeatures = [];
 
       // tile layer
       const tileLayer = new TileLayer({
@@ -124,7 +124,7 @@ export default {
         });
       }
 
-      // get all features ID for all DGGS layers
+      // DGGS layers
       if (this.layerSelectedDGGSComputed.length > 0) {
         var layersComputed = this.layerSelectedDGGSComputed;
         await Promise.all(
@@ -137,8 +137,8 @@ export default {
                   "/zones",
                 {
                   params: {
-                    resolution: 3,
-                    limit: 10,
+                    resolution: layer.level,
+                    limit: 10000,
                   },
                   headers: {
                     "Content-Type": "application/json",
@@ -159,6 +159,8 @@ export default {
               hex.properties.links = feature.links;
               hexagons.push(hex);
             });
+            this.featuresQuantity = hexagons.length;
+            this.layerLevel = layer.level;
 
             // gejson to upload to the map
             let geoJsonObject = {
@@ -166,14 +168,14 @@ export default {
               features: hexagons,
             };
 
-            this.dggsLayersFeatures = geoJsonObject;
+            // DGGS layer source
             const vectorSource = new VectorSource({
               features: new GeoJSON().readFeatures(geoJsonObject, {
                 featureProjection: "EPSG:3857",
               }),
             });
 
-            // vector layer
+            // DGGS vector layer
             const vectorLayer = new VectorLayer({
               source: vectorSource,
               style: function (feature) {
@@ -181,7 +183,11 @@ export default {
                 return style;
               },
             });
+
+            // saving vector layer to data
             this.extent = vectorLayer;
+
+            // adding layer to layers list
             this.layers.push(vectorLayer);
           })
         );
@@ -195,12 +201,11 @@ export default {
           center: this.mapCenter,
           zoom: this.mapZoom,
           constrainResolution: true,
-          // projection: "EPSG:4326",
         }),
       });
 
+      // extent map to last dggs layer
       if (this.extent) {
-        // this.map.getView().fit(this.extent.getExtent());
         var extent = this.extent.getSource().getExtent();
         this.map.getView().fit(extent, this.map.getSize());
       }
