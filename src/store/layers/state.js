@@ -3,5 +3,6 @@ export default function () {
     layerSelectedRaster: null,
     layersSelectedVector: [],
     layersSelectedDGGS: [],
+    zoom: 6,
   };
 }

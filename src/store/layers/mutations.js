@@ -16,3 +16,8 @@ export function SET_LAYERS_SELECTED_RASTER(state, layer) {
 export function SET_LAYERS_SELECTED_DGGS(state, layers) {
   state.layersSelectedDGGS = layers;
 }
+
+// set selected DGGS layers
+export function SET_MAP_ZOOM(state, zoom) {
+  state.zoom = zoom;
+}
