@@ -3,6 +3,7 @@ export default function () {
     layerSelectedRaster: null,
     layersSelectedVector: [],
     layersSelectedDGGS: [],
+    layerChoroplethParameters: [],
     zoom: 6,
   };
 }

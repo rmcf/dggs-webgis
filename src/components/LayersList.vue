@@ -59,15 +59,25 @@
                       label="Level"
                     />
                   </div>
-                  <!-- chroropleth map-->
-                  <div class="q-mt-md">
-                    <q-checkbox
-                      dense
-                      v-model="layer.choroplethStatus"
-                      label="Choropleth map"
-                    />
+                  <!-- choropleth parameter -->
+                  <div
+                    v-for="choroplethProperty in layerChoroplethParameters"
+                    :key="choroplethProperty.layerID"
+                  >
+                    <div
+                      v-if="choroplethProperty.layerID === layer.id"
+                      class="q-mt-md"
+                    >
+                      <q-select
+                        dense
+                        outlined
+                        v-model="layer.choroplethParameter"
+                        :options="choroplethProperty.choroplethParameters"
+                        label="Choropleth parameter"
+                      />
+                    </div>
                   </div>
-                  <div v-if="layer.choroplethStatus">
+                  <div v-if="layer.choroplethParameter !== ''">
                     <!-- chropleth ranges quantity -->
                     <div class="q-mt-md">
                       <q-select
@@ -101,6 +111,36 @@
                         emit-value
                         map-options
                       />
+                    </div>
+                    <!-- choropleth legend -->
+                    <div>
+                      <div
+                        v-for="choroplethProperty in layerChoroplethParameters"
+                        :key="choroplethProperty.layerID"
+                      >
+                        <div
+                          v-if="choroplethProperty.layerID === layer.id"
+                          class="q-pt-md"
+                        >
+                          <!-- colors and values -->
+                          <div
+                            v-for="(
+                              range, index
+                            ) in choroplethProperty.choroplethLegend"
+                            :key="index"
+                          >
+                            <div class="row items-center q-mb-xs">
+                              <div
+                                style="width: 50px; height: 25px"
+                                :style="'background-color:' + range.color"
+                              ></div>
+                              <div class="q-ml-md">
+                                {{ range.value.toFixed(2) }}
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
                     </div>
                   </div>
                 </q-item-section>
@@ -243,6 +283,8 @@ export default {
         { label: "equidistant", value: "e" },
         { label: "quantile", value: "q" },
       ],
+      collectionsAPI:
+        "https://dggs-api-bozea3cspa-ew.a.run.app/dggs-api/collections",
       layersAll: staticLayers,
       layersDGGS: [],
       layerSelectedRaster: null,
@@ -261,6 +303,24 @@ export default {
     layerSelectedRaster(newValue, oldValue) {
       this.addSelectedLayersRaster(this.layerSelectedRaster);
     },
+
+    // watch for map zoom changing
+    // mapZoom() {
+    //   this.layersDGGS.forEach((layer) => {
+    //     if (this.mapZoom <= 9 && layer.level > 6) {
+    //       layer.level = 6;
+    //       return;
+    //     }
+    //     if (this.mapZoom <= 10 && layer.level > 7) {
+    //       layer.level = 7;
+    //       return;
+    //     }
+    //     if (this.mapZoom <= 11 && layer.level > 8) {
+    //       layer.level = 8;
+    //       return;
+    //     }
+    //   });
+    // },
 
     // watch for selected DGGS layers
     layersSelectedDGGS: {
@@ -314,7 +374,7 @@ export default {
       this.loading = true;
       let ref = this;
       this.$axios
-        .get("https://dggs-api-bozea3cspa-ew.a.run.app/dggs-api/collections", {
+        .get(ref.collectionsAPI, {
           params: {},
           headers: {
             "Content-Type": "application/json",
@@ -325,9 +385,9 @@ export default {
           let layers = response.data["dggs-list"];
           // adding additional fields to each layer
           layers.forEach((layer, i, arr) => {
+            layer.type = "vector";
             layer.level = "3";
             layer.opacity = 0.7;
-            layer.choroplethStatus = false;
             layer.choroplethParameter = "";
             layer.choroplethRanges = 5;
             layer.choroplethRangesMode = "q";
@@ -355,7 +415,6 @@ export default {
 
     // filter levels of hexagons depends on zoom
     filterHexLevels(array, zoom) {
-      console.log("zoom: " + zoom);
       var levels = [];
       if (zoom <= 9) {
         levels = array.filter(function (level) {
@@ -409,6 +468,11 @@ export default {
     // map zoom
     mapZoom: function () {
       return this.$store.state.layers.zoom;
+    },
+
+    // map zoom
+    layerChoroplethParameters: function () {
+      return this.$store.state.layers.layerChoroplethParameters;
     },
   },
 };

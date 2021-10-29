@@ -21,3 +21,8 @@ export function SET_LAYERS_SELECTED_DGGS(state, layers) {
 export function SET_MAP_ZOOM(state, zoom) {
   state.zoom = zoom;
 }
+
+// set selected DGGS layers
+export function LAYER_CHOROPLETH_PARAMETERS(state, layerParamters) {
+  state.layerChoroplethParameters = layerParamters;
+}

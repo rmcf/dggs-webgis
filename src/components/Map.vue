@@ -2,16 +2,13 @@
   <div class="q-pa-md">
     <div class="row">
       <div class="col-10">
-        <div class="row items-start items-center q-gutter-md q-mb-md">
+        <div class="q-mb-md">
           <div>Map zoom: {{ mapZoom }}</div>
-          <!-- <div>
-            Map center: {{ mapCenterComputed[0].toFixed(5) }},
-            {{ mapCenterComputed[1].toFixed(5) }}
-          </div> -->
+          <div v-if="mapArea">Map area: {{ mapArea }} km<sup>2</sup></div>
           <div>
             Hexagons quantity: {{ featuresQuantity }} at Level: {{ layerLevel }}
           </div>
-          <div>Map extent: {{ mapExtent }}</div>
+          <div>Map extent (bbox): {{ mapExtent }}</div>
           <div>Map center: {{ mapCenterComputed }}</div>
         </div>
       </div>
@@ -23,14 +20,13 @@
         </div>
       </div>
     </div>
-    <!-- <div class="q-mb-md">DGGS layers features {{ dggsLayersFeatures }}</div> -->
+    <!-- map container -->
     <div id="openmap" ref="map-gis" class="map-container"></div>
   </div>
 </template>
 
 <script>
 import "ol/ol.css";
-// import { geoToH3, polyfill, h3SetToMultiPolygon } from "h3-js";
 import geojson2h3 from "geojson2h3";
 import { Map, View } from "ol";
 import TileLayer from "ol/layer/Tile";
@@ -39,10 +35,20 @@ import { fromLonLat, toLonLat } from "ol/proj";
 import VectorLayer from "ol/layer/Vector";
 import VectorSource from "ol/source/Vector";
 import GeoJSON from "ol/format/GeoJSON";
+import Feature from "ol/Feature";
+import Polygon from "ol/geom/Polygon";
+import { getArea, getDistance } from "ol/sphere";
 import { transformExtent } from "ol/proj";
-// import Feature from "ol/Feature";
+import {
+  getBottomLeft,
+  getBottomRight,
+  getTopLeft,
+  getTopRight,
+} from "ol/extent";
 import { Fill, Stroke, Style, Text } from "ol/style";
 import chroma from "chroma-js";
+
+var uniq = require("lodash.uniq");
 
 // styles for Countries layer
 const styleCountries = new Style({
@@ -109,8 +115,6 @@ const styleHexagonsChoropleth = new Style({
 export default {
   name: "Map",
 
-  props: { layer: Object },
-
   components: {},
 
   data() {
@@ -121,11 +125,12 @@ export default {
       mapZoom: 6,
       layers: [],
       dggsLayersFeatures: [],
-      extent: null,
       mapExtent: [],
+      mapArea: null,
       featuresQuantity: 0,
       layerLevel: 0,
       loading: false,
+      corners: null,
     };
   },
 
@@ -144,6 +149,7 @@ export default {
 
     mapZoom(newValue, oldValue) {
       this.$store.commit("layers/SET_MAP_ZOOM", this.mapZoom);
+      this.createMap();
     },
   },
 
@@ -155,11 +161,24 @@ export default {
     async createMap() {
       // start loading spinner
       this.loading = true;
+      var ref = this;
 
       // remove HTML map container
       document.getElementById("openmap").innerHTML = "";
+
       // clean layers list
       this.layers = [];
+
+      // map object
+      this.map = new Map({
+        target: this.$refs["map-gis"],
+        layers: [],
+        view: new View({
+          center: this.mapCenter,
+          zoom: this.mapZoom,
+          constrainResolution: true,
+        }),
+      });
 
       // tile layer
       const tileLayer = new TileLayer({
@@ -170,7 +189,8 @@ export default {
           attributions: this.layerSelectedRasterComputed.attributions,
         }),
       });
-      this.layers.push(tileLayer);
+      // this.layers.push(tileLayer);
+      ref.map.addLayer(tileLayer);
 
       // vector layers
       if (this.layersSelectedVectorComputed.length > 0) {
@@ -190,11 +210,13 @@ export default {
       }
 
       // DGGS layers
+      var layersChoroplethProperties = [];
       if (this.layerSelectedDGGSComputed.length > 0) {
         var layersComputed = this.layerSelectedDGGSComputed;
         var extent = this.mapExtent.toString();
-
+        // loading all selected DGGS layers
         await Promise.all(
+          // process each DGGS layer
           layersComputed.map(async (layer) => {
             var hexIDs = [];
             try {
@@ -214,34 +236,79 @@ export default {
                 }
               );
             } catch (error) {
+              this.loading = false; // stop loading spinner
               console.log("error ", error.message);
             }
+
             // save received from API geatures to local variable
             let hexFeatures = hexIDs.data.features;
             var hexagons = []; // empty array for hex IDs
             var choroplethValues = []; // empty array for choropleth data
-            // create vector feature, adding properties
+
+            // create vector feature, adding properties !!!!! improvements required
             hexFeatures.forEach((feature) => {
               let hexID = feature.id;
               let hex = geojson2h3.h3ToFeature(hexID);
-              hex.properties.id = feature.id;
-              hex.properties.links = feature.links;
-              hex.properties.elevation = feature.properties.elevation;
+
+              // feature property for choropleth map
+              var featureProperty = "";
+
+              // assign all attributes to
+              Object.entries(feature.properties).forEach((entry) => {
+                const [key, value] = entry;
+                hex.properties[key] = value;
+                if (key === layer.choroplethParameter) {
+                  featureProperty = key;
+                }
+              });
+
               hexagons.push(hex);
-              choroplethValues.push(feature.properties.elevation);
+
+              // select feature property
+              choroplethValues.push(feature.properties[featureProperty]);
             });
+
+            // layer choropleth parameters
+            var layerChoroplethParameters = [""];
+            // assign all attributes to
+            Object.entries(hexFeatures[0].properties).forEach((entry) => {
+              const [key, value] = entry;
+              layerChoroplethParameters.push(key);
+            });
+
+            // sorted choropleth data
             var choroplethValuesSorted = choroplethValues.sort();
+            // sorted choropleth data (not zero value)
+            var choroplethValuesSortedFiltered = choroplethValuesSorted.filter(
+              function (value) {
+                return value > 0;
+              }
+            );
+
+            // choropleth range breaks
             var limits = chroma.limits(
-              choroplethValuesSorted,
+              choroplethValuesSortedFiltered,
               layer.choroplethRangesMode,
               layer.choroplethRanges
             );
+
+            // function coloring the ranges !!!!!! impovements required: no data
             var colorFunction = chroma
               .scale(layer.choroplethColorPalette)
               .classes(limits);
-            // .nodata("#eee")(0.0);
+            // helper attributes of layer
             this.featuresQuantity = hexagons.length;
             this.layerLevel = layer.level;
+
+            // legend for layer
+            let layerChoroplethLegend = [];
+            limits.forEach((limit) => {
+              let legendItem = { color: "", value: 0 };
+              let color = colorFunction(limit).hex();
+              legendItem.color = color;
+              legendItem.value = limit;
+              layerChoroplethLegend.push(legendItem);
+            });
 
             // gejson to upload to the map
             let geoJsonObject = {
@@ -262,80 +329,90 @@ export default {
               type: "vector",
               source: vectorSource,
               style: function (feature) {
-                if (layer.choroplethStatus) {
+                if (layer.choroplethParameter !== "") {
                   // styleHexagons.getText().setText(feature.get("id"));
-                  let color = colorFunction(feature.get("elevation")).hex();
+                  let color = colorFunction(
+                    feature.get(layer.choroplethParameter)
+                  ).hex();
                   styleHexagonsChoropleth.getFill().setColor(color);
                   return styleHexagonsChoropleth;
                 } else {
                   return styleHexagonsDefault;
                 }
               },
-              // strategy: loadingstrategy.bbox,
               opacity: layer.opacity,
             });
 
-            // saving vector layer to data section
-            // this.extent = vectorLayer;
-
-            // adding layer to layers list
+            // adding DGGS layer to layers list
             this.layers.push(vectorLayer);
+
+            let layerChoroplethProperties = {
+              layerID: layer.id,
+              choroplethParameters: layerChoroplethParameters,
+              choroplethLegend: layerChoroplethLegend,
+            };
+            layersChoroplethProperties.push(layerChoroplethProperties);
           })
         );
       }
+      // save choropleth properties to vuex
+      this.layersChoroplethProperties(layersChoroplethProperties);
 
-      // olmap.getView().calculateExtent(olmap.getSize());
-
-      // map object
-      this.map = new Map({
-        target: this.$refs["map-gis"],
-        layers: [],
-        view: new View({
-          center: this.mapCenter,
-          zoom: this.mapZoom,
-          constrainResolution: true,
-        }),
-      });
-
+      // add all layers to the map
       this.layers.forEach((layer) => {
-        let ref = this;
         ref.map.addLayer(layer);
       });
 
-      // this.map.getLayers().forEach((layer) => {
-      //   if (layer) {
-      //     if (layer.get("type") !== "raster") {
-      //       this.map.removeLayer(layer);
-      //     }
-      //   }
-      // });
-
-      this.map.getLayers().forEach((layer) => {
-        console.log(layer.get("name"));
-      });
-
-      // extent map to last dggs layer
-      // if (this.extent) {
-      //   var extent = this.extent.getSource().getExtent();
-      //   this.map.getView().fit(extent, this.map.getSize());
-      // }
+      this.mapArea = this.mapViewArea(this.map);
 
       // on move event
       this.map.on("moveend", (event) => {
-        let ref = this;
         let map = event.map;
         this.mapCenter = map.getView().getCenter(); // view center
         this.mapZoom = map.getView().getZoom(); // view zoom
-        // get extent
-        let extent = this.map.getView().calculateExtent();
+        let extent = map.getView().calculateExtent(); // view extent
         let extentCalc = transformExtent(extent, "EPSG:3857", "EPSG:4326");
         this.mapExtent = extentCalc;
       });
 
-      // https://www.w3schools.com/jsref/obj_mouseevent.asp
-
       // stop loading spinner
       this.loading = false;
+    },
+
+    // integer to formated string (1135726.85 => "1 135 726.85")
+    numberWithSpaces(number) {
+      var parts = number.toString().split(".");
+      parts[0] = parts[0].replace(/\B(?=(\d{3})+(?!\d))/g, " ");
+      return parts.join(".");
+    },
+
+    layersChoroplethProperties(properties) {
+      this.$store.commit("layers/LAYER_CHOROPLETH_PARAMETERS", properties);
+    },
+
+    // mapViewArea calculation
+    mapViewArea(map) {
+      // calculation the area (sq km) of map view
+      let extentForPolygon = map.getView().calculateExtent();
+      let bl = getBottomLeft(extentForPolygon); // [867424.0544635155, 7570562.472440477]
+      let br = getBottomRight(extentForPolygon); // [4714958.310226148, 7570562.472440477]
+      let tl = getTopLeft(extentForPolygon); // [867424.0544635155, 8663917.725031639]
+      let tr = getTopRight(extentForPolygon); // [4714958.310226148, 8663917.725031639]
+      let corners = [];
+      corners.push(bl, tl, tr, br, bl);
+      // creating polygon from view corners
+      var polygonFeatureFromView = new Feature({
+        geometry: new Polygon([corners]),
+        name: "polygon",
+      });
+      var polygonFeatureGeometry = polygonFeatureFromView.getGeometry();
+      // area of view calculation
+      var viewAreaOnSphere = getArea(polygonFeatureGeometry) / 1000000;
+      // area of view format to string "1 135 726.85"
+      let areaStringFormatted = this.numberWithSpaces(
+        viewAreaOnSphere.toFixed(2)
+      );
+      return areaStringFormatted;
     },
   },
 
@@ -358,21 +435,6 @@ export default {
     layerSelectedDGGSComputed: function () {
       return this.$store.state.layers.layersSelectedDGGS;
     },
-    // map extent
-    // mapExtent: function () {
-    //   if (this.map) {
-    //     let corners = [];
-    //     let extent = this.map.getView().calculateExtent();
-    //     let bl = getBottomLeft(extent);
-    //     let tl = getTopLeft(extent);
-    //     let tr = getTopRight(extent);
-    //     let br = getBottomRight(extent);
-    //     corners.push(bl, tl, tr, br, bl);
-    //     return corners;
-    //   } else {
-    //     return null;
-    //   }
-    // },
   },
 };
 </script>
@@ -380,6 +442,6 @@ export default {
 <style lang="scss" scoped>
 .map-container {
   width: 100%;
-  height: 75vh;
+  height: 65vh;
 }
 </style>
