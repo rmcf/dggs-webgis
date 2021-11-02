@@ -8,8 +8,8 @@
           <div>
             Hexagons quantity: {{ featuresQuantity }} at Level: {{ layerLevel }}
           </div>
-          <div>Map extent (bbox): {{ mapExtent }}</div>
-          <div>Map center: {{ mapCenterComputed }}</div>
+          <!-- <div>Map extent (bbox): {{ mapExtent }}</div>
+          <div>Map center: {{ mapCenterComputed }}</div> -->
         </div>
       </div>
       <div class="col-2">
@@ -39,6 +39,7 @@ import Feature from "ol/Feature";
 import Polygon from "ol/geom/Polygon";
 import { getArea, getDistance } from "ol/sphere";
 import { transformExtent } from "ol/proj";
+import { defaults } from "ol/interaction";
 import {
   getBottomLeft,
   getBottomRight,
@@ -112,6 +113,17 @@ const styleHexagonsChoropleth = new Style({
   }),
 });
 
+// relations between H3-level & hex area
+const h3LevelHexArea = [
+  { h3level: 2, hexArea: 69000 }, // h3 official: 86745
+  { h3level: 3, hexArea: 9500 }, // h3 official: 12392
+  { h3level: 4, hexArea: 1350 }, // h3 official: 1770
+  { h3level: 5, hexArea: 190 }, // h3 official: 252
+  { h3level: 6, hexArea: 27 }, // h3 official: 36
+  { h3level: 7, hexArea: 4 }, // h3 official: 5
+  { h3level: 8, hexArea: 0.6 }, // h3 official: 0.74
+];
+
 export default {
   name: "Map",
 
@@ -149,7 +161,8 @@ export default {
 
     mapZoom(newValue, oldValue) {
       this.$store.commit("layers/SET_MAP_ZOOM", this.mapZoom);
-      this.createMap();
+      this.mapArea = this.mapViewArea(this.map);
+      // this.createMap();
     },
   },
 
@@ -172,6 +185,7 @@ export default {
       // map object
       this.map = new Map({
         target: this.$refs["map-gis"],
+        interactions: defaults({ mouseWheelZoom: false }),
         layers: [],
         view: new View({
           center: this.mapCenter,
@@ -201,6 +215,7 @@ export default {
               format: new GeoJSON(),
             }),
             style: function (feature) {
+              // console.log(feature);
               styleCountries.getText().setText(feature.get("name"));
               return styleCountries;
             },
@@ -242,35 +257,33 @@ export default {
 
             // save received from API geatures to local variable
             let hexFeatures = hexIDs.data.features;
-            var hexagons = []; // empty array for hex IDs
+            var hexagons = []; // empty array for vector hexagon on the map
             var choroplethValues = []; // empty array for choropleth data
 
             // create vector feature, adding properties !!!!! improvements required
-            hexFeatures.forEach((feature) => {
-              let hexID = feature.id;
-              let hex = geojson2h3.h3ToFeature(hexID);
-
+            hexFeatures.forEach((featureFromAPI) => {
+              // vector hexagon on the map
+              let hexagon = geojson2h3.h3ToFeature(featureFromAPI.id);
               // feature property for choropleth map
-              var featureProperty = "";
-
-              // assign all attributes to
-              Object.entries(feature.properties).forEach((entry) => {
+              // var featureProperty = "";
+              // assign all attributes of featureFromAPI to vector hexagon
+              Object.entries(featureFromAPI.properties).forEach((entry) => {
                 const [key, value] = entry;
-                hex.properties[key] = value;
-                if (key === layer.choroplethParameter) {
-                  featureProperty = key;
-                }
+                hexagon.properties[key] = value;
+                // if (key === layer.choroplethParameter) {
+                //   featureProperty = key;
+                // }
               });
-
-              hexagons.push(hex);
-
+              hexagons.push(hexagon);
               // select feature property
-              choroplethValues.push(feature.properties[featureProperty]);
+              choroplethValues.push(
+                featureFromAPI.properties[layer.choroplethParameter]
+              );
             });
 
             // layer choropleth parameters
             var layerChoroplethParameters = [""];
-            // assign all attributes to
+            // define hex attributes for cholopleth map
             Object.entries(hexFeatures[0].properties).forEach((entry) => {
               const [key, value] = entry;
               layerChoroplethParameters.push(key);
@@ -323,6 +336,11 @@ export default {
               }),
             });
 
+            // vectorSource.forEachFeature((feature) => {
+            //   let a = feature.getGeometry();
+            //   console.log(getArea(a) / 1000000);
+            // });
+
             // DGGS vector layer
             const vectorLayer = new VectorLayer({
               name: layer.id,
@@ -330,13 +348,18 @@ export default {
               source: vectorSource,
               style: function (feature) {
                 if (layer.choroplethParameter !== "") {
-                  // styleHexagons.getText().setText(feature.get("id"));
+                  // feature label
+                  let label = feature.get(layer.choroplethParameter).toFixed(2);
+                  styleHexagonsChoropleth.getText().setText(label);
                   let color = colorFunction(
                     feature.get(layer.choroplethParameter)
                   ).hex();
                   styleHexagonsChoropleth.getFill().setColor(color);
                   return styleHexagonsChoropleth;
                 } else {
+                  styleHexagonsDefault
+                    .getText()
+                    .setText(feature.get(layer.choroplethParameter));
                   return styleHexagonsDefault;
                 }
               },
@@ -442,6 +465,6 @@ export default {
 <style lang="scss" scoped>
 .map-container {
   width: 100%;
-  height: 65vh;
+  height: 75vh;
 }
 </style>
