@@ -4,7 +4,7 @@
       <div class="col-10">
         <div class="q-mb-md">
           <div>Map zoom: {{ mapZoom }}</div>
-          <div v-if="mapArea">Map area: {{ mapArea }} km<sup>2</sup></div>
+          <div>Map area: {{ mapAreaComputedFormated }} km<sup>2</sup></div>
           <div>
             Hexagons quantity: {{ featuresQuantity }} at Level: {{ layerLevel }}
           </div>
@@ -13,6 +13,7 @@
         </div>
       </div>
       <div class="col-2">
+        <!-- spinner -->
         <div class="flex flex-center" style="height: 50px; position: relative">
           <q-inner-loading :showing="loading">
             <q-spinner-ios color="primary" size="30px" />
@@ -102,7 +103,7 @@ const styleHexagonsChoropleth = new Style({
     width: 0,
   }),
   text: new Text({
-    font: "12px Calibri,sans-serif",
+    font: "8px Calibri,sans-serif",
     fill: new Fill({
       color: "#000",
     }),
@@ -113,17 +114,6 @@ const styleHexagonsChoropleth = new Style({
   }),
 });
 
-// relations between H3-level & hex area
-const h3LevelHexArea = [
-  { h3level: 2, hexArea: 69000 }, // h3 official: 86745
-  { h3level: 3, hexArea: 9500 }, // h3 official: 12392
-  { h3level: 4, hexArea: 1350 }, // h3 official: 1770
-  { h3level: 5, hexArea: 190 }, // h3 official: 252
-  { h3level: 6, hexArea: 27 }, // h3 official: 36
-  { h3level: 7, hexArea: 4 }, // h3 official: 5
-  { h3level: 8, hexArea: 0.6 }, // h3 official: 0.74
-];
-
 export default {
   name: "Map",
 
@@ -131,18 +121,17 @@ export default {
 
   data() {
     return {
-      // map object
       map: null,
       mapCenter: [2791191.1823448315, 8117240.098736058],
       mapZoom: 6,
-      layers: [],
-      dggsLayersFeatures: [],
       mapExtent: [],
       mapArea: null,
+      layers: [],
+      dggsLayersFeatures: [],
       featuresQuantity: 0,
       layerLevel: 0,
-      loading: false,
       corners: null,
+      loading: false,
     };
   },
 
@@ -159,10 +148,9 @@ export default {
       this.createMap();
     },
 
-    mapZoom(newValue, oldValue) {
+    mapAreaComputed(newValue, oldValue) {
       this.$store.commit("layers/SET_MAP_ZOOM", this.mapZoom);
-      this.mapArea = this.mapViewArea(this.map);
-      // this.createMap();
+      this.$store.commit("layers/MAP_AREA", this.mapAreaComputed);
     },
   },
 
@@ -174,18 +162,16 @@ export default {
     async createMap() {
       // start loading spinner
       this.loading = true;
+      this.map = null;
       var ref = this;
 
       // remove HTML map container
       document.getElementById("openmap").innerHTML = "";
 
-      // clean layers list
-      this.layers = [];
-
       // map object
       this.map = new Map({
         target: this.$refs["map-gis"],
-        interactions: defaults({ mouseWheelZoom: false }),
+        // interactions: defaults({ mouseWheelZoom: false }),
         layers: [],
         view: new View({
           center: this.mapCenter,
@@ -209,7 +195,7 @@ export default {
       // vector layers
       if (this.layersSelectedVectorComputed.length > 0) {
         this.layersSelectedVectorComputed.forEach((layer) => {
-          let vectorLayer = new VectorLayer({
+          let vectorLayerJSON = new VectorLayer({
             source: new VectorSource({
               url: layer.url,
               format: new GeoJSON(),
@@ -220,19 +206,21 @@ export default {
               return styleCountries;
             },
           });
-          this.layers.push(vectorLayer);
+          // this.layers.push(vectorLayerJSON);
+          console.log("1 vector layer");
+          ref.map.addLayer(vectorLayerJSON);
         });
       }
 
       // DGGS layers
       var layersChoroplethProperties = [];
       if (this.layerSelectedDGGSComputed.length > 0) {
-        var layersComputed = this.layerSelectedDGGSComputed;
+        var layersDGGSComputed = this.layerSelectedDGGSComputed;
         var extent = this.mapExtent.toString();
         // loading all selected DGGS layers
         await Promise.all(
           // process each DGGS layer
-          layersComputed.map(async (layer) => {
+          layersDGGSComputed.map(async (layer) => {
             var hexIDs = [];
             try {
               hexIDs = await this.$axios.get(
@@ -260,7 +248,7 @@ export default {
             var hexagons = []; // empty array for vector hexagon on the map
             var choroplethValues = []; // empty array for choropleth data
 
-            // create vector feature, adding properties !!!!! improvements required
+            // create vector feature, adding properties
             hexFeatures.forEach((featureFromAPI) => {
               // vector hexagon on the map
               let hexagon = geojson2h3.h3ToFeature(featureFromAPI.id);
@@ -284,11 +272,12 @@ export default {
             // layer choropleth parameters
             var layerChoroplethParameters = [""];
             // define hex attributes for cholopleth map
-            Object.entries(hexFeatures[0].properties).forEach((entry) => {
-              const [key, value] = entry;
-              layerChoroplethParameters.push(key);
-            });
-
+            if (hexFeatures.length > 0) {
+              Object.entries(hexFeatures[0].properties).forEach((entry) => {
+                const [key, value] = entry;
+                layerChoroplethParameters.push(key);
+              });
+            }
             // sorted choropleth data
             var choroplethValuesSorted = choroplethValues.sort();
             // sorted choropleth data (not zero value)
@@ -330,7 +319,7 @@ export default {
             };
 
             // DGGS layer source
-            const vectorSource = new VectorSource({
+            const vectorSourceDGGS = new VectorSource({
               features: new GeoJSON().readFeatures(geoJsonObject, {
                 featureProjection: "EPSG:3857",
               }),
@@ -342,15 +331,26 @@ export default {
             // });
 
             // DGGS vector layer
-            const vectorLayer = new VectorLayer({
+            const vectorLayerDGGS = new VectorLayer({
               name: layer.id,
               type: "vector",
-              source: vectorSource,
+              source: vectorSourceDGGS,
               style: function (feature) {
                 if (layer.choroplethParameter !== "") {
                   // feature label
-                  let label = feature.get(layer.choroplethParameter).toFixed(2);
-                  styleHexagonsChoropleth.getText().setText(label);
+                  let label = feature.get(layer.choroplethParameter);
+                  let labelFormatted = null;
+                  // check if label not null
+                  if (label) {
+                    labelFormatted = label.toFixed(2);
+                  } else {
+                    labelFormatted = label;
+                  }
+                  if (layer.choroplethLabels) {
+                    styleHexagonsChoropleth
+                      .getText()
+                      .setText(labelFormatted + "");
+                  }
                   let color = colorFunction(
                     feature.get(layer.choroplethParameter)
                   ).hex();
@@ -367,7 +367,7 @@ export default {
             });
 
             // adding DGGS layer to layers list
-            this.layers.push(vectorLayer);
+            ref.map.addLayer(vectorLayerDGGS);
 
             let layerChoroplethProperties = {
               layerID: layer.id,
@@ -380,13 +380,6 @@ export default {
       }
       // save choropleth properties to vuex
       this.layersChoroplethProperties(layersChoroplethProperties);
-
-      // add all layers to the map
-      this.layers.forEach((layer) => {
-        ref.map.addLayer(layer);
-      });
-
-      this.mapArea = this.mapViewArea(this.map);
 
       // on move event
       this.map.on("moveend", (event) => {
@@ -412,31 +405,6 @@ export default {
     layersChoroplethProperties(properties) {
       this.$store.commit("layers/LAYER_CHOROPLETH_PARAMETERS", properties);
     },
-
-    // mapViewArea calculation
-    mapViewArea(map) {
-      // calculation the area (sq km) of map view
-      let extentForPolygon = map.getView().calculateExtent();
-      let bl = getBottomLeft(extentForPolygon); // [867424.0544635155, 7570562.472440477]
-      let br = getBottomRight(extentForPolygon); // [4714958.310226148, 7570562.472440477]
-      let tl = getTopLeft(extentForPolygon); // [867424.0544635155, 8663917.725031639]
-      let tr = getTopRight(extentForPolygon); // [4714958.310226148, 8663917.725031639]
-      let corners = [];
-      corners.push(bl, tl, tr, br, bl);
-      // creating polygon from view corners
-      var polygonFeatureFromView = new Feature({
-        geometry: new Polygon([corners]),
-        name: "polygon",
-      });
-      var polygonFeatureGeometry = polygonFeatureFromView.getGeometry();
-      // area of view calculation
-      var viewAreaOnSphere = getArea(polygonFeatureGeometry) / 1000000;
-      // area of view format to string "1 135 726.85"
-      let areaStringFormatted = this.numberWithSpaces(
-        viewAreaOnSphere.toFixed(2)
-      );
-      return areaStringFormatted;
-    },
   },
 
   computed: {
@@ -446,6 +414,42 @@ export default {
       let centerCoords = toLonLat(center);
       return centerCoords;
     },
+    // mapViewArea calculation
+    mapAreaComputed: function () {
+      if (this.map && this.mapZoom) {
+        // calculation the area (sq km) of map view
+        let extentForPolygon = this.map.getView().calculateExtent();
+        let bl = getBottomLeft(extentForPolygon); // [867424.0544635155, 7570562.472440477]
+        let br = getBottomRight(extentForPolygon); // [4714958.310226148, 7570562.472440477]
+        let tl = getTopLeft(extentForPolygon); // [867424.0544635155, 8663917.725031639]
+        let tr = getTopRight(extentForPolygon); // [4714958.310226148, 8663917.725031639]
+        let corners = [];
+        corners.push(bl, tl, tr, br, bl);
+        // creating polygon from view corners
+        var polygonFeatureFromView = new Feature({
+          geometry: new Polygon([corners]),
+          name: "polygon",
+        });
+        var polygonFeatureGeometry = polygonFeatureFromView.getGeometry();
+        // area of view calculation
+        var viewAreaOnSphere = getArea(polygonFeatureGeometry) / 1000000;
+        return viewAreaOnSphere;
+      } else {
+        return null;
+      }
+    },
+
+    // area of view format to string "1 135 726.85"
+    mapAreaComputedFormated: function () {
+      if (this.mapAreaComputed) {
+        let area = this.mapAreaComputed;
+        let areaFormated = area.toFixed(2);
+        return this.numberWithSpaces(areaFormated);
+      } else {
+        return null;
+      }
+    },
+
     // vector layers
     layersSelectedVectorComputed: function () {
       return this.$store.state.layers.layersSelectedVector;

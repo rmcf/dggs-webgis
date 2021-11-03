@@ -53,9 +53,7 @@
                       dense
                       outlined
                       v-model="layer.level"
-                      :options="
-                        this.filterHexLevels(layer.resolutions, this.mapZoom)
-                      "
+                      :options="layer.levels"
                       label="Level"
                     />
                   </div>
@@ -110,6 +108,13 @@
                         label="Color palette"
                         emit-value
                         map-options
+                      />
+                    </div>
+                    <!-- choropleth labels -->
+                    <div class="q-mt-sm">
+                      <q-checkbox
+                        v-model="layer.choroplethLabels"
+                        label="Labels"
                       />
                     </div>
                     <!-- choropleth legend -->
@@ -206,6 +211,18 @@
 <script>
 var filter = require("lodash.filter");
 var cloneDeep = require("lodash.clonedeep");
+var max = require("lodash.max");
+
+// relations between H3-level & hex area
+const h3LevelHexArea = [
+  { h3level: 2, hexArea: 69000 }, // h3 official: 86745
+  { h3level: 3, hexArea: 10000 }, // h3 official: 12392
+  { h3level: 4, hexArea: 1350 }, // h3 official: 1770
+  { h3level: 5, hexArea: 190 }, // h3 official: 252
+  { h3level: 6, hexArea: 27 }, // h3 official: 36
+  { h3level: 7, hexArea: 4 }, // h3 official: 5
+  { h3level: 8, hexArea: 0.6 }, // h3 official: 0.74
+];
 
 const staticLayers = [
   {
@@ -304,31 +321,32 @@ export default {
       this.addSelectedLayersRaster(this.layerSelectedRaster);
     },
 
-    // watch for map zoom changing
-    // mapZoom() {
-    //   this.layersDGGS.forEach((layer) => {
-    //     if (this.mapZoom <= 9 && layer.level > 6) {
-    //       layer.level = 6;
-    //       return;
-    //     }
-    //     if (this.mapZoom <= 10 && layer.level > 7) {
-    //       layer.level = 7;
-    //       return;
-    //     }
-    //     if (this.mapZoom <= 11 && layer.level > 8) {
-    //       layer.level = 8;
-    //       return;
-    //     }
-    //   });
-    // },
-
     // watch for selected DGGS layers
     layersSelectedDGGS: {
       handler(newValue, oldValue) {
         let selectedDGGSlayers = cloneDeep(this.layersSelectedDGGS);
-        this.addSelectedLayersDGGS(selectedDGGSlayers);
+        // this.addSelectedLayersDGGS(selectedDGGSlayers);
+        this.$store.commit(
+          "layers/SET_LAYERS_SELECTED_DGGS",
+          selectedDGGSlayers
+        );
       },
       deep: true,
+    },
+
+    // whatch for map area changes
+    mapArea(newValue, oldValue) {
+      if (this.layersSelectedDGGS.length > 0) {
+        this.layersDGGS.forEach((layer) => {
+          layer.levels = this.layerAvailableeReslutions(
+            layer.resolutions,
+            newValue
+          );
+          layer.level = max(
+            this.layerAvailableeReslutions(layer.resolutions, newValue)
+          );
+        });
+      }
     },
   },
 
@@ -352,11 +370,6 @@ export default {
       this.$store.commit("layers/SET_LAYERS_SELECTED_VECTOR", selectedLayers);
     },
 
-    // add selected DGGS layer to Vuex
-    addSelectedLayersDGGS(selectedLayers) {
-      this.$store.commit("layers/SET_LAYERS_SELECTED_DGGS", selectedLayers);
-    },
-
     // check is layers is selected
     layerSelected(layer) {
       if (
@@ -367,6 +380,28 @@ export default {
       } else {
         return false;
       }
+    },
+
+    // layer available resolutions
+    layerAvailableeReslutions(levelResolutions, area) {
+      // layer H3 resolution in number format
+      const layerH3Resolutions = levelResolutions.map((level) => {
+        return Number(level);
+      });
+      // calculated available H3 resolutions for layer
+      const availableLeveles = [];
+      // calculating available levels
+      layerH3Resolutions.forEach((resolution) => {
+        let h3Level = filter(h3LevelHexArea, function (level) {
+          return level.h3level === resolution;
+        });
+        let hexQuantity = area / h3Level[0].hexArea;
+        // console.log(h3Level[0].h3level + " : " + hexQuantity);
+        if (hexQuantity < 4900) {
+          availableLeveles.push(resolution);
+        }
+      });
+      return availableLeveles;
     },
 
     // get DGGS layers
@@ -386,11 +421,18 @@ export default {
           // adding additional fields to each layer
           layers.forEach((layer, i, arr) => {
             layer.type = "vector";
-            layer.level = "3";
+            layer.level = max(
+              this.layerAvailableeReslutions(layer.resolutions, this.mapArea)
+            );
+            layer.levels = this.layerAvailableeReslutions(
+              layer.resolutions,
+              this.mapArea
+            );
             layer.opacity = 0.7;
             layer.choroplethParameter = "";
             layer.choroplethRanges = 5;
             layer.choroplethRangesMode = "q";
+            layer.choroplethLabels = false;
             layer.choroplethColorPalette = "OrRd";
             layer.zIndex = i + 2;
           });
@@ -411,36 +453,6 @@ export default {
       } else {
         return false;
       }
-    },
-
-    // filter levels of hexagons depends on zoom
-    filterHexLevels(array, zoom) {
-      var levels = [];
-      if (zoom <= 9) {
-        levels = array.filter(function (level) {
-          return level <= 6;
-        });
-        return levels;
-      }
-      if (zoom <= 10) {
-        levels = array.filter(function (level) {
-          return level <= 7;
-        });
-        return levels;
-      }
-      if (zoom <= 11) {
-        levels = array.filter(function (level) {
-          return level <= 8;
-        });
-        return levels;
-      }
-      if (zoom <= 18) {
-        levels = array.filter(function (level) {
-          return level;
-        });
-        return levels;
-      }
-      return levels;
     },
   },
 
@@ -470,9 +482,14 @@ export default {
       return this.$store.state.layers.zoom;
     },
 
-    // map zoom
+    // layer choropleth parameters
     layerChoroplethParameters: function () {
       return this.$store.state.layers.layerChoroplethParameters;
+    },
+
+    // map area
+    mapArea: function () {
+      return this.$store.state.layers.mapArea;
     },
   },
 };

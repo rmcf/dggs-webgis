@@ -26,3 +26,8 @@ export function SET_MAP_ZOOM(state, zoom) {
 export function LAYER_CHOROPLETH_PARAMETERS(state, layerParamters) {
   state.layerChoroplethParameters = layerParamters;
 }
+
+// set map area
+export function MAP_AREA(state, value) {
+  state.mapArea = value;
+}

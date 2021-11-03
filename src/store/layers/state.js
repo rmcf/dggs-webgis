@@ -5,5 +5,6 @@ export default function () {
     layersSelectedDGGS: [],
     layerChoroplethParameters: [],
     zoom: 6,
+    mapArea: 0,
   };
 }
