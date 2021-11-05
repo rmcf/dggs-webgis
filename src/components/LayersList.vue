@@ -335,7 +335,7 @@ export default {
     },
 
     // whatch for map area changes
-    mapArea(newValue, oldValue) {
+    mapZoom(newValue, oldValue) {
       if (this.layersSelectedDGGS.length > 0) {
         this.layersDGGS.forEach((layer) => {
           layer.levels = this.layerAvailableeReslutions(
@@ -343,8 +343,13 @@ export default {
             newValue
           );
           layer.level = max(
-            this.layerAvailableeReslutions(layer.resolutions, newValue)
+            this.layerAvailableeReslutions(layer.resolutions, this.mapArea)
           );
+          // console.log("all layers level: " + layer.level);
+        });
+        // check the selected layers available resolutions
+        this.layersSelectedDGGS.forEach((layer) => {
+          // console.log("selected layer level: " + layer.level);
         });
       }
     },
@@ -353,7 +358,7 @@ export default {
   created() {
     // set default raster layer
     let layerRasterDefault = filter(this.layersAll, function (layer) {
-      return layer.id === "osm";
+      return layer.id === "esri_world_imagery";
     });
     this.layerSelectedRaster = layerRasterDefault[0];
     this.getDGGSlayersList();
@@ -397,7 +402,7 @@ export default {
         });
         let hexQuantity = area / h3Level[0].hexArea;
         // console.log(h3Level[0].h3level + " : " + hexQuantity);
-        if (hexQuantity < 4900) {
+        if (hexQuantity < 3000) {
           availableLeveles.push(resolution);
         }
       });
@@ -421,13 +426,8 @@ export default {
           // adding additional fields to each layer
           layers.forEach((layer, i, arr) => {
             layer.type = "vector";
-            layer.level = max(
-              this.layerAvailableeReslutions(layer.resolutions, this.mapArea)
-            );
-            layer.levels = this.layerAvailableeReslutions(
-              layer.resolutions,
-              this.mapArea
-            );
+            layer.level = 4;
+            layer.levels = [2, 3, 4, 5];
             layer.opacity = 0.7;
             layer.choroplethParameter = "";
             layer.choroplethRanges = 5;

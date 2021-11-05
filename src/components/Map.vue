@@ -1,25 +1,20 @@
 <template>
-  <div class="q-pa-md">
-    <div class="row">
-      <div class="col-10">
-        <div class="q-mb-md">
-          <div>Map zoom: {{ mapZoom }}</div>
-          <div>Map area: {{ mapAreaComputedFormated }} km<sup>2</sup></div>
-          <div>
-            Hexagons quantity: {{ featuresQuantity }} at Level: {{ layerLevel }}
-          </div>
-          <!-- <div>Map extent (bbox): {{ mapExtent }}</div>
-          <div>Map center: {{ mapCenterComputed }}</div> -->
-        </div>
+  <div class="q-pl-md q-pr-md q-pb-md">
+    <div class="row justify-between items-center">
+      <div>Map zoom: {{ mapZoom }}</div>
+      <div>Map area: {{ mapAreaComputedFormated }} km<sup>2</sup></div>
+      <div>
+        Hexagons quantity: {{ featuresQuantity }} at Level: {{ layerLevel }}
       </div>
-      <div class="col-2">
-        <!-- spinner -->
-        <div class="flex flex-center" style="height: 50px; position: relative">
+      <div style="padding-right: 100px">
+        <div style="height: 20px; position: relative">
           <q-inner-loading :showing="loading">
-            <q-spinner-ios color="primary" size="30px" />
+            <q-spinner-ios color="primary" size="20px" />
           </q-inner-loading>
         </div>
       </div>
+      <!-- <div>Map extent (bbox): {{ mapExtent }}</div>
+          <div>Map center: {{ mapCenterComputed }}</div> -->
     </div>
     <!-- map container -->
     <div id="openmap" ref="map-gis" class="map-container"></div>
@@ -40,7 +35,7 @@ import Feature from "ol/Feature";
 import Polygon from "ol/geom/Polygon";
 import { getArea, getDistance } from "ol/sphere";
 import { transformExtent } from "ol/proj";
-import { defaults } from "ol/interaction";
+// import { defaults } from "ol/interaction";
 import {
   getBottomLeft,
   getBottomRight,
@@ -96,7 +91,7 @@ const styleHexagonsDefault = new Style({
 // styles for hexagon layer
 const styleHexagonsChoropleth = new Style({
   fill: new Fill({
-    color: "#fff",
+    color: "#0000ff",
   }),
   stroke: new Stroke({
     color: "transparent",
@@ -148,7 +143,7 @@ export default {
       this.createMap();
     },
 
-    mapAreaComputed(newValue, oldValue) {
+    mapZoom(newValue, oldValue) {
       this.$store.commit("layers/SET_MAP_ZOOM", this.mapZoom);
       this.$store.commit("layers/MAP_AREA", this.mapAreaComputed);
     },
@@ -298,6 +293,7 @@ export default {
             var colorFunction = chroma
               .scale(layer.choroplethColorPalette)
               .classes(limits);
+
             // helper attributes of layer
             this.featuresQuantity = hexagons.length;
             this.layerLevel = layer.level;
@@ -335,31 +331,33 @@ export default {
               name: layer.id,
               type: "vector",
               source: vectorSourceDGGS,
+              renderer: "canvas",
               style: function (feature) {
+                // style for choropleth
                 if (layer.choroplethParameter !== "") {
-                  // feature label
-                  let label = feature.get(layer.choroplethParameter);
-                  let labelFormatted = null;
-                  // check if label not null
-                  if (label) {
-                    labelFormatted = label.toFixed(2);
-                  } else {
-                    labelFormatted = label;
-                  }
+                  // feature labels
                   if (layer.choroplethLabels) {
+                    let labelFormatted = null;
+                    let label = feature.get(layer.choroplethParameter);
+                    if (label) {
+                      labelFormatted = label.toFixed(2);
+                    } else {
+                      labelFormatted = label;
+                    }
                     styleHexagonsChoropleth
                       .getText()
                       .setText(labelFormatted + "");
+                  } else {
+                    styleHexagonsChoropleth.getText().setText("");
                   }
+                  // feature colors
                   let color = colorFunction(
                     feature.get(layer.choroplethParameter)
                   ).hex();
                   styleHexagonsChoropleth.getFill().setColor(color);
                   return styleHexagonsChoropleth;
                 } else {
-                  styleHexagonsDefault
-                    .getText()
-                    .setText(feature.get(layer.choroplethParameter));
+                  // default style
                   return styleHexagonsDefault;
                 }
               },
@@ -469,6 +467,6 @@ export default {
 <style lang="scss" scoped>
 .map-container {
   width: 100%;
-  height: 75vh;
+  height: 85vh;
 }
 </style>
