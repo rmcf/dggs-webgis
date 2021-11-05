@@ -1,15 +1,15 @@
 <template>
   <div class="q-pl-md q-pr-md q-pb-md">
-    <div class="row justify-between items-center">
+    <div class="row justify-between items-center q-mb-md">
       <div>Map zoom: {{ mapZoom }}</div>
       <div>Map area: {{ mapAreaComputedFormated }} km<sup>2</sup></div>
       <div>
         Hexagons quantity: {{ featuresQuantity }} at Level: {{ layerLevel }}
       </div>
       <div style="padding-right: 100px">
-        <div style="height: 20px; position: relative">
+        <div style="height: 30px; position: relative">
           <q-inner-loading :showing="loading">
-            <q-spinner-ios color="primary" size="20px" />
+            <q-spinner-ios color="primary" size="30px" />
           </q-inner-loading>
         </div>
       </div>
@@ -263,6 +263,9 @@ export default {
                 featureFromAPI.properties[layer.choroplethParameter]
               );
             });
+
+            // devide point
+            // ================================================================
 
             // layer choropleth parameters
             var layerChoroplethParameters = [""];
