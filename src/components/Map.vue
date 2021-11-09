@@ -118,7 +118,7 @@ export default {
     return {
       map: null,
       mapCenter: [2791191.1823448315, 8117240.098736058],
-      mapZoom: 6,
+      mapZoom: null,
       mapExtent: [],
       mapArea: null,
       layers: [],
@@ -149,9 +149,14 @@ export default {
     },
   },
 
+  created() {},
+
   mounted() {
+    this.mapZoom = this.$store.state.layers.zoom;
     this.createMap();
   },
+
+  unmounted() {},
 
   methods: {
     async createMap() {
@@ -206,6 +211,15 @@ export default {
           ref.map.addLayer(vectorLayerJSON);
         });
       }
+
+      // basic extent values for bbox query
+      let extentBasic = this.map.getView().calculateExtent(); // view extent
+      let extentCalcBasic = transformExtent(
+        extentBasic,
+        "EPSG:3857",
+        "EPSG:4326"
+      );
+      this.mapExtent = extentCalcBasic;
 
       // DGGS layers
       var layersChoroplethProperties = [];
@@ -264,10 +278,7 @@ export default {
               );
             });
 
-            // devide point
-            // ================================================================
-
-            // layer choropleth parameters
+            // layer choropleth parameters, basic value
             var layerChoroplethParameters = [""];
             // define hex attributes for cholopleth map
             if (hexFeatures.length > 0) {
@@ -276,109 +287,212 @@ export default {
                 layerChoroplethParameters.push(key);
               });
             }
+
             // sorted choropleth data
             var choroplethValuesSorted = choroplethValues.sort();
             // sorted choropleth data (not zero value)
             var choroplethValuesSortedFiltered = choroplethValuesSorted.filter(
               function (value) {
-                return value > 0;
+                return value >= 0;
               }
             );
 
-            // choropleth range breaks
-            var limits = chroma.limits(
-              choroplethValuesSortedFiltered,
-              layer.choroplethRangesMode,
-              layer.choroplethRanges
-            );
+            // continuous case
+            // ==================================================================
 
-            // function coloring the ranges !!!!!! impovements required: no data
-            var colorFunction = chroma
-              .scale(layer.choroplethColorPalette)
-              .classes(limits);
+            if (layer.choroplethScale === "continuous") {
+              // choropleth range breaks
+              var limits = chroma.limits(
+                choroplethValuesSortedFiltered,
+                layer.choroplethRangesMode,
+                layer.choroplethRanges
+              );
 
-            // helper attributes of layer
-            this.featuresQuantity = hexagons.length;
-            this.layerLevel = layer.level;
+              // function coloring the ranges !!!!!! impovements required: no data
+              var colorFunction = chroma
+                .scale(layer.choroplethColorPalette)
+                .classes(limits);
 
-            // legend for layer
-            let layerChoroplethLegend = [];
-            limits.forEach((limit) => {
-              let legendItem = { color: "", value: 0 };
-              let color = colorFunction(limit).hex();
-              legendItem.color = color;
-              legendItem.value = limit;
-              layerChoroplethLegend.push(legendItem);
-            });
+              // helper attributes of layer
+              this.featuresQuantity = hexagons.length;
+              this.layerLevel = layer.level;
 
-            // gejson to upload to the map
-            let geoJsonObject = {
-              type: "FeatureCollection",
-              features: hexagons,
-            };
+              // legend for layer
+              let layerChoroplethLegend = [];
+              limits.forEach((limit) => {
+                let legendItem = { color: "", value: 0 };
+                let color = colorFunction(limit).hex();
+                legendItem.color = color;
+                legendItem.value = limit.toFixed(2);
+                layerChoroplethLegend.push(legendItem);
+              });
 
-            // DGGS layer source
-            const vectorSourceDGGS = new VectorSource({
-              features: new GeoJSON().readFeatures(geoJsonObject, {
-                featureProjection: "EPSG:3857",
-              }),
-            });
+              // gejson to upload to the map
+              let geoJsonObject = {
+                type: "FeatureCollection",
+                features: hexagons,
+              };
 
-            // vectorSource.forEachFeature((feature) => {
-            //   let a = feature.getGeometry();
-            //   console.log(getArea(a) / 1000000);
-            // });
+              // DGGS layer source
+              const vectorSourceDGGS = new VectorSource({
+                features: new GeoJSON().readFeatures(geoJsonObject, {
+                  featureProjection: "EPSG:3857",
+                }),
+              });
 
-            // DGGS vector layer
-            const vectorLayerDGGS = new VectorLayer({
-              name: layer.id,
-              type: "vector",
-              source: vectorSourceDGGS,
-              renderer: "canvas",
-              style: function (feature) {
-                // style for choropleth
-                if (layer.choroplethParameter !== "") {
-                  // feature labels
-                  if (layer.choroplethLabels) {
-                    let labelFormatted = null;
-                    let label = feature.get(layer.choroplethParameter);
-                    if (label) {
-                      labelFormatted = label.toFixed(2);
+              // vectorSource.forEachFeature((feature) => {
+              //   let a = feature.getGeometry();
+              //   console.log(getArea(a) / 1000000);
+              // });
+
+              // DGGS vector layer
+              const vectorLayerDGGS = new VectorLayer({
+                name: layer.id,
+                type: "vector",
+                source: vectorSourceDGGS,
+                renderer: "canvas",
+                style: function (feature) {
+                  // style for choropleth
+                  if (layer.choroplethParameter !== "") {
+                    // feature labels
+                    if (layer.choroplethLabels) {
+                      let labelFormatted = null;
+                      let label = feature.get(layer.choroplethParameter);
+                      if (label) {
+                        labelFormatted = label.toFixed(2);
+                      } else {
+                        labelFormatted = label;
+                      }
+                      styleHexagonsChoropleth
+                        .getText()
+                        .setText(labelFormatted + "");
                     } else {
-                      labelFormatted = label;
+                      styleHexagonsChoropleth.getText().setText("");
                     }
-                    styleHexagonsChoropleth
-                      .getText()
-                      .setText(labelFormatted + "");
+                    // feature colors
+                    let color = colorFunction(
+                      feature.get(layer.choroplethParameter)
+                    ).hex();
+                    styleHexagonsChoropleth.getFill().setColor(color);
+                    return styleHexagonsChoropleth;
                   } else {
-                    styleHexagonsChoropleth.getText().setText("");
+                    // default style
+                    return styleHexagonsDefault;
                   }
-                  // feature colors
-                  let color = colorFunction(
-                    feature.get(layer.choroplethParameter)
-                  ).hex();
-                  styleHexagonsChoropleth.getFill().setColor(color);
-                  return styleHexagonsChoropleth;
-                } else {
-                  // default style
-                  return styleHexagonsDefault;
-                }
-              },
-              opacity: layer.opacity,
-            });
+                },
+                opacity: layer.opacity,
+              });
 
-            // adding DGGS layer to layers list
-            ref.map.addLayer(vectorLayerDGGS);
+              // adding DGGS layer to layers list
+              ref.map.addLayer(vectorLayerDGGS);
 
-            let layerChoroplethProperties = {
-              layerID: layer.id,
-              choroplethParameters: layerChoroplethParameters,
-              choroplethLegend: layerChoroplethLegend,
-            };
-            layersChoroplethProperties.push(layerChoroplethProperties);
+              // create layer choropleth properties
+              let layerChoroplethProperties = {
+                layerID: layer.id,
+                choroplethParameters: layerChoroplethParameters,
+                choroplethLegend: layerChoroplethLegend,
+              };
+              layersChoroplethProperties.push(layerChoroplethProperties);
+
+              // classes case
+              // ==================================================================
+            } else {
+              // uniq classes
+              const choroplethValuesSortedUniq = uniq(choroplethValuesSorted);
+
+              // legend for layer
+              const layerChoroplethLegend = [];
+              choroplethValuesSortedUniq.forEach((legendClass) => {
+                let legendItem = { color: "", value: 0 };
+                let color = chroma.random(legendClass).hex();
+                legendItem.color = color;
+                legendItem.value = legendClass;
+                layerChoroplethLegend.push(legendItem);
+              });
+
+              // layer choropleth parameters, basic value
+              var layerChoroplethParameters = [""];
+              // define hex attributes for cholopleth map
+              if (hexFeatures.length > 0) {
+                Object.entries(hexFeatures[0].properties).forEach((entry) => {
+                  const [key, value] = entry;
+                  layerChoroplethParameters.push(key);
+                });
+              }
+
+              // gejson to upload to the map
+              let geoJsonObject = {
+                type: "FeatureCollection",
+                features: hexagons,
+              };
+
+              // DGGS layer source
+              const vectorSourceDGGS = new VectorSource({
+                features: new GeoJSON().readFeatures(geoJsonObject, {
+                  featureProjection: "EPSG:3857",
+                }),
+              });
+
+              // vectorSource.forEachFeature((feature) => {
+              //   let a = feature.getGeometry();
+              //   console.log(getArea(a) / 1000000);
+              // });
+
+              // DGGS vector layer
+              const vectorLayerDGGS = new VectorLayer({
+                name: layer.id,
+                type: "vector",
+                source: vectorSourceDGGS,
+                renderer: "canvas",
+                style: function (feature) {
+                  const featureValue = feature.get(layer.choroplethParameter);
+                  // style for choropleth
+                  if (layer.choroplethParameter !== "") {
+                    // feature labels
+                    if (layer.choroplethLabels) {
+                      let labelFormatted = null;
+                      let label = feature.get(layer.choroplethParameter);
+                      if (label) {
+                        labelFormatted = label;
+                      } else {
+                        labelFormatted = label;
+                      }
+                      styleHexagonsChoropleth
+                        .getText()
+                        .setText(labelFormatted + "");
+                    } else {
+                      styleHexagonsChoropleth.getText().setText("");
+                    }
+                    // feature color
+                    const colorFeature = ref.featureColor(
+                      featureValue,
+                      layerChoroplethLegend
+                    );
+                    styleHexagonsChoropleth.getFill().setColor(colorFeature);
+                    return styleHexagonsChoropleth;
+                  } else {
+                    // default style
+                    return styleHexagonsDefault;
+                  }
+                },
+                opacity: layer.opacity,
+              });
+
+              // adding DGGS layer to layers list
+              ref.map.addLayer(vectorLayerDGGS);
+
+              // create layer choropleth properties
+              let layerChoroplethProperties = {
+                layerID: layer.id,
+                choroplethParameters: layerChoroplethParameters,
+                choroplethLegend: layerChoroplethLegend,
+              };
+              layersChoroplethProperties.push(layerChoroplethProperties);
+            }
           })
         );
       }
+
       // save choropleth properties to vuex
       this.layersChoroplethProperties(layersChoroplethProperties);
 
@@ -405,6 +519,16 @@ export default {
 
     layersChoroplethProperties(properties) {
       this.$store.commit("layers/LAYER_CHOROPLETH_PARAMETERS", properties);
+    },
+
+    featureColor(featureValue, legend) {
+      let color = "#000";
+      legend.forEach((legendClass) => {
+        if (legendClass.value == featureValue) {
+          color = legendClass.color;
+        } else return "#000";
+      });
+      return color;
     },
   },
 

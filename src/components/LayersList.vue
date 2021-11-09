@@ -12,7 +12,15 @@
           enter-active-class="animated fadeIn"
           leave-active-class="animated fadeOut"
         >
-          <div v-if="layersLoading" style="height: 30px; position: relative">
+          <div
+            v-if="layersLoading"
+            style="
+              height: 30px;
+              position: relative;
+              margin-top: 1rem;
+              margin-bottom: 1rem;
+            "
+          >
             <q-inner-loading :showing="layersLoading">
               <q-spinner-ios color="primary" size="30px" />
             </q-inner-loading>
@@ -45,6 +53,7 @@
               <q-item v-if="layerSelected(layer)" class="row items-start">
                 <q-item-section avatar> </q-item-section>
                 <q-item-section>
+                  <!-- opacity and level of hexagons -->
                   <div class="row q-col-gutter-sm q-mb-sm">
                     <!-- opacity -->
                     <div class="col-6">
@@ -69,7 +78,8 @@
                       />
                     </div>
                   </div>
-                  <!-- choropleth parameter -->
+
+                  <!-- choropleth parameters -->
                   <div
                     v-for="choroplethProperty in layerChoroplethParameters"
                     :key="choroplethProperty.layerID"
@@ -78,34 +88,52 @@
                       v-if="choroplethProperty.layerID === layer.id"
                       class="q-mb-sm"
                     >
-                      <q-select
-                        dense
-                        outlined
-                        v-model="layer.choroplethParameter"
-                        :options="choroplethProperty.choroplethParameters"
-                        label="Choropleth parameter"
-                      />
-                    </div>
-                  </div>
-                  <div v-if="layer.choroplethParameter !== ''">
-                    <div class="q-mb-sm">
-                      <!-- chropleth ranges mode -->
-                      <div>
+                      <!-- choropleth parameter -->
+                      <div class="q-mb-sm">
                         <q-select
                           dense
                           outlined
-                          v-model="layer.choroplethRangesMode"
-                          :options="rangesMode"
-                          label="Classification"
-                          emit-value
-                          map-options
+                          v-model="layer.choroplethParameter"
+                          :options="choroplethProperty.choroplethParameters"
+                          label="Choropleth parameter"
                         />
                       </div>
-                    </div>
-                    <div class="row q-col-gutter-sm q-mb-sm">
-                      <div class="col-6">
+
+                      <div v-if="layer.choroplethParameter !== ''">
+                        <!-- choropleth scale type -->
+                        <div class="q-mb-sm">
+                          <q-select
+                            dense
+                            outlined
+                            v-model="layer.choroplethScale"
+                            :options="['continuous', 'classified']"
+                            label="Choropleth scale type"
+                          />
+                        </div>
+
+                        <div
+                          v-if="layer.choroplethScale === 'continuous'"
+                          class="q-mb-sm"
+                        >
+                          <!-- chropleth ranges mode -->
+                          <div>
+                            <q-select
+                              dense
+                              outlined
+                              v-model="layer.choroplethRangesMode"
+                              :options="rangesMode"
+                              label="Classification"
+                              emit-value
+                              map-options
+                            />
+                          </div>
+                        </div>
+
                         <!-- chropleth classes quantity -->
-                        <div>
+                        <div
+                          v-if="layer.choroplethScale === 'continuous'"
+                          class="q-mb-sm"
+                        >
                           <q-select
                             dense
                             outlined
@@ -114,52 +142,54 @@
                             label="Classes"
                           />
                         </div>
-                      </div>
-                      <div class="col-6">
+
+                        <!-- chropleth color palette -->
+                        <div
+                          v-if="layer.choroplethScale === 'continuous'"
+                          class="q-mb-sm"
+                        >
+                          <q-select
+                            dense
+                            outlined
+                            v-model="layer.choroplethColorPalette"
+                            :options="['OrRd', 'BuGn', 'YlOrBr', 'Purples']"
+                            label="Color palette"
+                            emit-value
+                            map-options
+                          />
+                        </div>
+
                         <!-- choropleth labels -->
-                        <div>
+                        <div class="q-mb-sm">
                           <q-checkbox
                             v-model="layer.choroplethLabels"
                             label="Labels"
                           />
                         </div>
-                      </div>
-                    </div>
 
-                    <!-- chropleth color palette -->
-                    <div class="q-mb-sm">
-                      <q-select
-                        dense
-                        outlined
-                        v-model="layer.choroplethColorPalette"
-                        :options="['OrRd', 'BuGn', 'YlOrBr', 'Purples']"
-                        label="Color palette"
-                        emit-value
-                        map-options
-                      />
-                    </div>
-
-                    <!-- choropleth legend -->
-                    <div>
-                      <div
-                        v-for="choroplethProperty in layerChoroplethParameters"
-                        :key="choroplethProperty.layerID"
-                      >
-                        <div v-if="choroplethProperty.layerID === layer.id">
-                          <!-- colors and values -->
+                        <!-- choropleth legend -->
+                        <div>
                           <div
-                            v-for="(
-                              range, index
-                            ) in choroplethProperty.choroplethLegend"
-                            :key="index"
+                            v-for="choroplethProperty in layerChoroplethParameters"
+                            :key="choroplethProperty.layerID"
                           >
-                            <div class="row items-center q-mb-xs">
+                            <div v-if="choroplethProperty.layerID === layer.id">
+                              <!-- colors and values -->
                               <div
-                                style="width: 50px; height: 25px"
-                                :style="'background-color:' + range.color"
-                              ></div>
-                              <div class="q-ml-md">
-                                {{ range.value.toFixed(2) }}
+                                v-for="(
+                                  range, index
+                                ) in choroplethProperty.choroplethLegend"
+                                :key="index"
+                              >
+                                <div class="row items-center q-mb-xs">
+                                  <div
+                                    style="width: 50px; height: 25px"
+                                    :style="'background-color:' + range.color"
+                                  ></div>
+                                  <div class="q-ml-md">
+                                    {{ range.value }} ({{ range.color }})
+                                  </div>
+                                </div>
                               </div>
                             </div>
                           </div>
@@ -169,7 +199,6 @@
                   </div>
                 </q-item-section>
               </q-item>
-
               <!-- tooltip -->
               <q-tooltip v-if="disableLayers(layer['dggs-id'])">
                 The {{ layer["dggs-id"] }} DGGS system is currently not
@@ -178,6 +207,7 @@
             </div>
           </q-list>
         </div>
+
         <!-- list of vector layers -->
         <div>
           <q-item
@@ -360,16 +390,11 @@ export default {
         this.layersDGGS.forEach((layer) => {
           layer.levels = this.layerAvailableeReslutions(
             layer.resolutions,
-            newValue
+            this.mapArea
           );
           layer.level = max(
             this.layerAvailableeReslutions(layer.resolutions, this.mapArea)
           );
-          // console.log("all layers level: " + layer.level);
-        });
-        // check the selected layers available resolutions
-        this.layersSelectedDGGS.forEach((layer) => {
-          // console.log("selected layer level: " + layer.level);
         });
       }
     },
@@ -449,6 +474,7 @@ export default {
             layer.levels = [2, 3, 4, 5];
             layer.opacity = 0.7;
             layer.choroplethParameter = "";
+            layer.choroplethScale = "continuous"; // "continuous", "classified"
             layer.choroplethRanges = 5;
             layer.choroplethRangesMode = "q";
             layer.choroplethLabels = false;
