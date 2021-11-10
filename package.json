@@ -19,6 +19,7 @@
     "lodash.clonedeep": "^4.5.0",
     "lodash.filter": "^4.6.0",
     "lodash.max": "^4.0.1",
+    "lodash.sum": "^4.0.2",
     "lodash.uniq": "^4.5.0",
     "ol": "^6.9.0",
     "quasar": "^2.0.0",

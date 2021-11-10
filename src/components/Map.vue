@@ -44,8 +44,9 @@ import {
 } from "ol/extent";
 import { Fill, Stroke, Style, Text } from "ol/style";
 import chroma from "chroma-js";
-
+// lodash modules
 var uniq = require("lodash.uniq");
+var sum = require("lodash.sum");
 
 // styles for Countries layer
 const styleCountries = new Style({
@@ -143,9 +144,34 @@ export default {
       this.createMap();
     },
 
-    mapZoom(newValue, oldValue) {
-      this.$store.commit("layers/SET_MAP_ZOOM", this.mapZoom);
-      this.$store.commit("layers/MAP_AREA", this.mapAreaComputed);
+    // mapZoom(newValue, oldValue) {
+    //   this.$store.commit("layers/SET_MAP_ZOOM", this.mapZoom);
+    //   this.$store.commit("layers/MAP_AREA", this.mapAreaComputed);
+    // },
+
+    // mapCenter(newValue, oldValue) {
+    //   let isEqual = newValue.toString() === oldValue.toString();
+    //   if (!isEqual) {
+    //     this.createMap();
+    //   }
+    // },
+
+    mapZoomAndCenter: {
+      handler(newValue, oldValue) {
+        // check if zoom changed
+        if (oldValue.zoom !== newValue.zoom) {
+          this.$store.commit("layers/SET_MAP_ZOOM", this.mapZoom);
+          this.$store.commit("layers/MAP_AREA", this.mapAreaComputed);
+          return;
+        }
+        // chek if center changed
+        let isEqual = newValue.center.toString() === oldValue.center.toString();
+        if (!isEqual) {
+          this.createMap();
+          return;
+        }
+      },
+      deep: true,
     },
   },
 
@@ -351,6 +377,7 @@ export default {
                 type: "vector",
                 source: vectorSourceDGGS,
                 renderer: "canvas",
+                zIndex: layer.zIndex,
                 style: function (feature) {
                   // style for choropleth
                   if (layer.choroplethParameter !== "") {
@@ -400,13 +427,23 @@ export default {
               // uniq classes
               const choroplethValuesSortedUniq = uniq(choroplethValuesSorted);
 
+              // sum of uni values
+              const choroplethValuesSortedUniqSum = sum(
+                choroplethValuesSortedUniq
+              );
+
+              // function coloring the ranges !!!!!! impovements required: no data
+              var colorFunctionClasses = chroma
+                .scale(layer.choroplethColorPalette)
+                .classes(choroplethValuesSortedUniq.length);
+
               // legend for layer
               const layerChoroplethLegend = [];
-              choroplethValuesSortedUniq.forEach((legendClass) => {
-                let legendItem = { color: "", value: 0 };
-                let color = chroma.random(legendClass).hex();
-                legendItem.color = color;
+              choroplethValuesSortedUniq.forEach((legendClass, index) => {
+                let legendItem = { color: "", value: 0, normVal: 0 };
                 legendItem.value = legendClass;
+                legendItem.normVal = index / choroplethValuesSortedUniq.length;
+                legendItem.color = colorFunctionClasses(legendItem.normVal);
                 layerChoroplethLegend.push(legendItem);
               });
 
@@ -573,6 +610,10 @@ export default {
       } else {
         return null;
       }
+    },
+
+    mapZoomAndCenter: function () {
+      return { zoom: this.mapZoom, center: this.mapCenter };
     },
 
     // vector layers

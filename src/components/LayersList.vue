@@ -79,6 +79,19 @@
                     </div>
                   </div>
 
+                  <!-- z-index -->
+                  <div class="q-mb-sm">
+                    <q-select
+                      dense
+                      outlined
+                      v-model="layer.zIndex"
+                      :options="[1, 2, 3, 4, 5, 6, 7, 8, 9, 10]"
+                      label="Z-index"
+                      emit-value
+                      map-options
+                    />
+                  </div>
+
                   <!-- choropleth parameters -->
                   <div
                     v-for="choroplethProperty in layerChoroplethParameters"
@@ -105,6 +118,7 @@
                           <q-select
                             dense
                             outlined
+                            @update:model-value="changeColorPalette(layer.id)"
                             v-model="layer.choroplethScale"
                             :options="['continuous', 'classified']"
                             label="Choropleth scale type"
@@ -143,7 +157,7 @@
                           />
                         </div>
 
-                        <!-- chropleth color palette -->
+                        <!-- chropleth color continuous palette -->
                         <div
                           v-if="layer.choroplethScale === 'continuous'"
                           class="q-mb-sm"
@@ -152,7 +166,32 @@
                             dense
                             outlined
                             v-model="layer.choroplethColorPalette"
-                            :options="['OrRd', 'BuGn', 'YlOrBr', 'Purples']"
+                            :options="['OrRd', 'BuGn', 'YlOrBr']"
+                            label="Color palette"
+                            emit-value
+                            map-options
+                          />
+                        </div>
+
+                        <!-- chropleth color classified palette -->
+                        <div
+                          v-if="layer.choroplethScale === 'classified'"
+                          class="q-mb-sm"
+                        >
+                          <q-select
+                            dense
+                            outlined
+                            v-model="layer.choroplethColorPalette"
+                            :options="[
+                              'BrBG',
+                              'PiYG',
+                              'PRGn',
+                              'PuOr',
+                              'RdBu',
+                              'RdGy',
+                              'RdYlBu',
+                              'RdYlGn',
+                            ]"
                             label="Color palette"
                             emit-value
                             map-options
@@ -187,7 +226,7 @@
                                     :style="'background-color:' + range.color"
                                   ></div>
                                   <div class="q-ml-md">
-                                    {{ range.value }} ({{ range.color }})
+                                    {{ range.value }}
                                   </div>
                                 </div>
                               </div>
@@ -498,6 +537,15 @@ export default {
       } else {
         return false;
       }
+    },
+
+    // change color palettes for "continuous" and "classified"
+    changeColorPalette(layerID) {
+      let layers = filter(this.layersDGGS, { id: layerID });
+      let layer = layers[0];
+      if (layer.choroplethScale === "classified") {
+        layer.choroplethColorPalette = "YlOrBr";
+      } else layer.choroplethColorPalette = "RdBu";
     },
   },
 
