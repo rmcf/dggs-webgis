@@ -526,6 +526,10 @@ export default {
       this.loading = false;
     },
 
+    async updateMap() {
+      console.log("update map");
+    },
+
     // integer to formated string (1135726.85 => "1 135 726.85")
     numberWithSpaces(number) {
       var parts = number.toString().split(".");
