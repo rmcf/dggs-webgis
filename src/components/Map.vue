@@ -233,7 +233,6 @@ export default {
             },
           });
           // this.layers.push(vectorLayerJSON);
-          console.log("1 vector layer");
           ref.map.addLayer(vectorLayerJSON);
         });
       }
@@ -247,8 +246,10 @@ export default {
       );
       this.mapExtent = extentCalcBasic;
 
-      // DGGS layers
+      // array of choropleth properties of all dggs layers
       var layersChoroplethProperties = [];
+
+      // DGGS layers
       if (this.layerSelectedDGGSComputed.length > 0) {
         var layersDGGSComputed = this.layerSelectedDGGSComputed;
         var extent = this.mapExtent.toString();
@@ -257,6 +258,7 @@ export default {
           // process each DGGS layer
           layersDGGSComputed.map(async (layer) => {
             var hexIDs = [];
+
             try {
               hexIDs = await this.$axios.get(
                 "https://dggs-api-bozea3cspa-ew.a.run.app/dggs-api/collections/" +
@@ -287,15 +289,10 @@ export default {
             hexFeatures.forEach((featureFromAPI) => {
               // vector hexagon on the map
               let hexagon = geojson2h3.h3ToFeature(featureFromAPI.id);
-              // feature property for choropleth map
-              // var featureProperty = "";
               // assign all attributes of featureFromAPI to vector hexagon
               Object.entries(featureFromAPI.properties).forEach((entry) => {
                 const [key, value] = entry;
                 hexagon.properties[key] = value;
-                // if (key === layer.choroplethParameter) {
-                //   featureProperty = key;
-                // }
               });
               hexagons.push(hexagon);
               // select feature property
@@ -316,42 +313,41 @@ export default {
 
             // sorted choropleth data
             var choroplethValuesSorted = choroplethValues.sort();
-            // sorted choropleth data (not zero value)
-            var choroplethValuesSortedFiltered = choroplethValuesSorted.filter(
-              function (value) {
-                return value >= 0;
-              }
-            );
 
-            // continuous case
+            // choropleth continuous case
             // ==================================================================
 
             if (layer.choroplethScale === "continuous") {
               // choropleth range breaks
               var limits = chroma.limits(
-                choroplethValuesSortedFiltered,
+                choroplethValuesSorted,
                 layer.choroplethRangesMode,
                 layer.choroplethRanges
               );
 
               // function coloring the ranges !!!!!! impovements required: no data
-              var colorFunction = chroma
+              var colorFunctionContinuous = chroma
                 .scale(layer.choroplethColorPalette)
                 .classes(limits);
 
-              // helper attributes of layer
-              this.featuresQuantity = hexagons.length;
-              this.layerLevel = layer.level;
-
               // legend for layer
               let layerChoroplethLegend = [];
+
               limits.forEach((limit) => {
                 let legendItem = { color: "", value: 0 };
-                let color = colorFunction(limit).hex();
+                let color = colorFunctionContinuous(limit).hex();
                 legendItem.color = color;
                 legendItem.value = limit.toFixed(2);
                 layerChoroplethLegend.push(legendItem);
               });
+
+              // create layer choropleth properties
+              let layerChoroplethProperties = {
+                layerID: layer.id,
+                choroplethParameters: layerChoroplethParameters,
+                choroplethLegend: layerChoroplethLegend,
+              };
+              layersChoroplethProperties.push(layerChoroplethProperties);
 
               // gejson to upload to the map
               let geoJsonObject = {
@@ -365,11 +361,6 @@ export default {
                   featureProjection: "EPSG:3857",
                 }),
               });
-
-              // vectorSource.forEachFeature((feature) => {
-              //   let a = feature.getGeometry();
-              //   console.log(getArea(a) / 1000000);
-              // });
 
               // DGGS vector layer
               const vectorLayerDGGS = new VectorLayer({
@@ -397,7 +388,7 @@ export default {
                       styleHexagonsChoropleth.getText().setText("");
                     }
                     // feature colors
-                    let color = colorFunction(
+                    let color = colorFunctionContinuous(
                       feature.get(layer.choroplethParameter)
                     ).hex();
                     styleHexagonsChoropleth.getFill().setColor(color);
@@ -413,15 +404,7 @@ export default {
               // adding DGGS layer to layers list
               ref.map.addLayer(vectorLayerDGGS);
 
-              // create layer choropleth properties
-              let layerChoroplethProperties = {
-                layerID: layer.id,
-                choroplethParameters: layerChoroplethParameters,
-                choroplethLegend: layerChoroplethLegend,
-              };
-              layersChoroplethProperties.push(layerChoroplethProperties);
-
-              // classes case
+              // choropleth classes case
               // ==================================================================
             } else {
               // uniq classes
@@ -439,6 +422,7 @@ export default {
 
               // legend for layer
               const layerChoroplethLegend = [];
+
               choroplethValuesSortedUniq.forEach((legendClass, index) => {
                 let legendItem = { color: "", value: 0, normVal: 0 };
                 legendItem.value = legendClass;
@@ -457,6 +441,14 @@ export default {
                 });
               }
 
+              // create layer choropleth properties
+              let layerChoroplethProperties = {
+                layerID: layer.id,
+                choroplethParameters: layerChoroplethParameters,
+                choroplethLegend: layerChoroplethLegend,
+              };
+              layersChoroplethProperties.push(layerChoroplethProperties);
+
               // gejson to upload to the map
               let geoJsonObject = {
                 type: "FeatureCollection",
@@ -469,11 +461,6 @@ export default {
                   featureProjection: "EPSG:3857",
                 }),
               });
-
-              // vectorSource.forEachFeature((feature) => {
-              //   let a = feature.getGeometry();
-              //   console.log(getArea(a) / 1000000);
-              // });
 
               // DGGS vector layer
               const vectorLayerDGGS = new VectorLayer({
@@ -517,14 +504,6 @@ export default {
 
               // adding DGGS layer to layers list
               ref.map.addLayer(vectorLayerDGGS);
-
-              // create layer choropleth properties
-              let layerChoroplethProperties = {
-                layerID: layer.id,
-                choroplethParameters: layerChoroplethParameters,
-                choroplethLegend: layerChoroplethLegend,
-              };
-              layersChoroplethProperties.push(layerChoroplethProperties);
             }
           })
         );
