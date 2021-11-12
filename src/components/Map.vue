@@ -47,6 +47,7 @@ import chroma from "chroma-js";
 // lodash modules
 var uniq = require("lodash.uniq");
 var sum = require("lodash.sum");
+var cloneDeep = require("lodash.clonedeep");
 
 // styles for Countries layer
 const styleCountries = new Style({
@@ -137,11 +138,11 @@ export default {
     },
 
     layersSelectedVectorComputed(newValue, oldValue) {
-      this.createMap();
+      this.updateMap(this.map);
     },
 
     layerSelectedDGGSComputed(newValue, oldValue) {
-      this.createMap();
+      this.updateMap(this.map);
     },
 
     // mapZoom(newValue, oldValue) {
@@ -167,7 +168,8 @@ export default {
         // chek if center changed
         let isEqual = newValue.center.toString() === oldValue.center.toString();
         if (!isEqual) {
-          this.createMap();
+          // this.createMap();
+          this.updateMap(this.map);
           return;
         }
       },
@@ -217,6 +219,33 @@ export default {
       });
       // this.layers.push(tileLayer);
       ref.map.addLayer(tileLayer);
+
+      // load vector layers
+      this.loadVectorLayers();
+    },
+
+    async updateMap(map) {
+      // start loading spinner
+      this.loading = true;
+      var ref = this;
+
+      // create clone of map layers
+      const mapVectorLayersCloned = [...map.getLayers().getArray()];
+
+      // remove all vector layers
+      mapVectorLayersCloned.forEach((layer) => {
+        if (layer && layer.get("type") === "vector") {
+          map.removeLayer(layer);
+        }
+      });
+
+      // load vector layers
+      this.loadVectorLayers();
+    },
+
+    async loadVectorLayers() {
+      this.loading = true;
+      var ref = this;
 
       // vector layers
       if (this.layersSelectedVectorComputed.length > 0) {
@@ -524,10 +553,6 @@ export default {
 
       // stop loading spinner
       this.loading = false;
-    },
-
-    async updateMap() {
-      console.log("update map");
     },
 
     // integer to formated string (1135726.85 => "1 135 726.85")
