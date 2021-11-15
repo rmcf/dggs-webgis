@@ -1,11 +1,11 @@
 <template>
   <div class="q-pl-md q-pr-md q-pb-md">
     <div class="row justify-between items-center q-mb-md">
+      <!-- map zoom -->
       <div>Zoom: {{ mapZoom }}</div>
+      <!-- map area -->
       <div>Area: {{ mapAreaComputedFormated }} km<sup>2</sup></div>
-      <!-- <div>
-        Hexagons quantity: {{ featuresQuantity }} at Level: {{ layerLevel }}
-      </div> -->
+      <!-- progress bar -->
       <div style="padding-right: 100px">
         <div style="height: 30px; position: relative">
           <q-inner-loading :showing="loading">
