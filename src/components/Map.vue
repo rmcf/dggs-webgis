@@ -1,11 +1,11 @@
 <template>
   <div class="q-pl-md q-pr-md q-pb-md">
     <div class="row justify-between items-center q-mb-md">
-      <div>Map zoom: {{ mapZoom }}</div>
-      <div>Map area: {{ mapAreaComputedFormated }} km<sup>2</sup></div>
-      <div>
+      <div>Zoom: {{ mapZoom }}</div>
+      <div>Area: {{ mapAreaComputedFormated }} km<sup>2</sup></div>
+      <!-- <div>
         Hexagons quantity: {{ featuresQuantity }} at Level: {{ layerLevel }}
-      </div>
+      </div> -->
       <div style="padding-right: 100px">
         <div style="height: 30px; position: relative">
           <q-inner-loading :showing="loading">
@@ -18,6 +18,13 @@
     </div>
     <!-- map container -->
     <div id="openmap" ref="map-gis" class="map-container"></div>
+    <!-- footer copyright -->
+    <div class="text-body2 q-pt-sm text-right">
+      © Copyright 2021-{{ year }}
+      <a class="text-nodecoration" href="https://www.ut.ee/en"
+        >University of Tartu</a
+      >
+    </div>
   </div>
 </template>
 
@@ -47,7 +54,6 @@ import chroma from "chroma-js";
 // lodash modules
 var uniq = require("lodash.uniq");
 var sum = require("lodash.sum");
-var cloneDeep = require("lodash.clonedeep");
 
 // styles for Countries layer
 const styleCountries = new Style({
@@ -636,6 +642,12 @@ export default {
     layerSelectedDGGSComputed: function () {
       return this.$store.state.layers.layersSelectedDGGS;
     },
+    // current year
+    year: function () {
+      const date = new Date();
+      let year = date.getFullYear();
+      return year;
+    },
   },
 };
 </script>
@@ -643,6 +655,6 @@ export default {
 <style lang="scss" scoped>
 .map-container {
   width: 100%;
-  height: 85vh;
+  height: 74vh;
 }
 </style>
