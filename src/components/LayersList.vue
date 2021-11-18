@@ -36,7 +36,7 @@
                 <q-item-section avatar>
                   <q-checkbox
                     v-model="layersSelectedDGGS"
-                    :disable="disableLayers(layer['dggs-id'])"
+                    :disable="disableLayers(layer.crs)"
                     :val="layer"
                     color="primary"
                   />
@@ -239,7 +239,7 @@
                 </q-item-section>
               </q-item>
               <!-- tooltip -->
-              <q-tooltip v-if="disableLayers(layer['dggs-id'])">
+              <q-tooltip v-if="disableLayers(layer.crs)">
                 The {{ layer["dggs-id"] }} DGGS system is currently not
                 supported.
               </q-tooltip>
@@ -313,16 +313,16 @@ const h3LevelHexArea = [
 ];
 
 const staticLayers = [
-  {
-    id: "countries",
-    title: "Countries of the World",
-    description: "List of all countries of the World from public source",
-    attributions: "",
-    url: "https://openlayers.org/en/latest/examples/data/geojson/countries.geojson",
-    type: "vector", // available values: vector, raster, wms, tms
-    format: "geojson",
-    projection: "EPSG:4326",
-  },
+  // {
+  //   id: "countries",
+  //   title: "Countries of the World",
+  //   description: "List of all countries of the World from public source",
+  //   attributions: "",
+  //   url: "https://openlayers.org/en/latest/examples/data/geojson/countries.geojson",
+  //   type: "vector", // available values: vector, raster, wms, tms
+  //   format: "geojson",
+  //   projection: "EPSG:4326",
+  // },
   {
     id: "osm",
     title: "Open Street Map",
@@ -474,9 +474,13 @@ export default {
     // layer available resolutions
     layerAvailableeReslutions(levelResolutions, area) {
       // layer H3 resolution in number format
-      const layerH3Resolutions = levelResolutions.map((level) => {
-        return Number(level);
-      });
+      // const layerH3Resolutions = levelResolutions.map((level) => {
+      //   return Number(level);
+      // });
+
+      // temporal constant array
+      // ============================================================
+      const layerH3Resolutions = [2, 3, 4, 5, 6, 7, 8];
       // calculated available H3 resolutions for layer
       const availableLeveles = [];
       // calculating available levels
@@ -505,7 +509,7 @@ export default {
         })
         .then((response) => {
           // save layers received from API
-          let layers = response.data["dggs-list"];
+          let layers = response.data.collections;
           // adding additional fields to each layer
           layers.forEach((layer, i, arr) => {
             layer.type = "vector";

@@ -193,6 +193,16 @@ export default {
   unmounted() {},
 
   methods: {
+    // dggs layer's url constructor
+    dggsLayerUrl(crs, layerID) {
+      return crs + ":" + layerID;
+    },
+
+    // dggs layer's rangeRefine query parameter
+    layerRangeRefine(min, max) {
+      return min + "," + max;
+    },
+
     async createMap() {
       // start loading spinner
       this.loading = true;
@@ -296,12 +306,12 @@ export default {
 
             try {
               hexIDs = await this.$axios.get(
-                "https://dggs-api-bozea3cspa-ew.a.run.app/dggs-api/collections/" +
-                  layer.id +
+                "https://dggs-api-bozea3cspa-ew.a.run.app/dggs-api/dggs/" +
+                  ref.dggsLayerUrl(layer.crs, layer.id) +
                   "/zones",
                 {
                   params: {
-                    resolution: layer.level,
+                    rangeRefine: ref.layerRangeRefine(layer.level, 10),
                     limit: 10000,
                     bbox: extent,
                   },
