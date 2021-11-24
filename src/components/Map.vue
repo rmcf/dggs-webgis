@@ -2,9 +2,9 @@
   <div class="q-pl-md q-pr-md q-pb-md">
     <div class="row justify-between items-center q-mb-md">
       <!-- map zoom -->
-      <div>Zoom: {{ mapZoom }}</div>
+      <div>{{ $t("zoom") }}: {{ mapZoom }}</div>
       <!-- map area -->
-      <div>Area: {{ mapAreaComputedFormated }} km<sup>2</sup></div>
+      <div>{{ $t("area") }}: {{ mapAreaComputedFormated }} km<sup>2</sup></div>
       <!-- progress bar -->
       <div style="padding-right: 100px">
         <div style="height: 30px; position: relative">

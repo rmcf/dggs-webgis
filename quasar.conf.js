@@ -9,6 +9,7 @@
 /* eslint-env node */
 const ESLintPlugin = require("eslint-webpack-plugin");
 const { configure } = require("quasar/wrappers");
+const path = require("path");
 
 module.exports = configure(function (ctx) {
   return {
@@ -67,6 +68,21 @@ module.exports = configure(function (ctx) {
         chain
           .plugin("eslint-webpack-plugin")
           .use(ESLintPlugin, [{ extensions: ["js", "vue"] }]);
+        // settigs for internationazation of SFC
+        chain.module
+          .rule("i18n-resource")
+          .test(/\.(json5?|ya?ml)$/)
+          .include.add(path.resolve(__dirname, "./src/i18n"))
+          .end()
+          .type("javascript/auto")
+          .use("i18n-resource")
+          .loader("@intlify/vue-i18n-loader");
+        chain.module
+          .rule("i18n")
+          .resourceQuery(/blockType=i18n/)
+          .type("javascript/auto")
+          .use("i18n")
+          .loader("@intlify/vue-i18n-loader");
       },
     },
 

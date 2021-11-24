@@ -64,7 +64,7 @@
                         :options="[
                           0, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1,
                         ]"
-                        label="Opacity"
+                        :label="$t('opacity')"
                       />
                     </div>
                     <!-- level of hexagons -->
@@ -74,7 +74,7 @@
                         outlined
                         v-model="layer.level"
                         :options="layer.levels"
-                        label="Level"
+                        :label="$t('level')"
                       />
                     </div>
                   </div>
@@ -86,7 +86,7 @@
                       outlined
                       v-model="layer.zIndex"
                       :options="[1, 2, 3, 4, 5, 6, 7, 8, 9, 10]"
-                      label="Z-index"
+                      :label="$t('z_index')"
                       emit-value
                       map-options
                     />
@@ -108,7 +108,7 @@
                           outlined
                           v-model="layer.choroplethParameter"
                           :options="choroplethProperty.choroplethParameters"
-                          label="Choropleth parameter"
+                          :label="$t('choropleth_parameter')"
                         />
                       </div>
 
@@ -118,10 +118,15 @@
                           <q-select
                             dense
                             outlined
+                            emit-value
+                            map-options
                             @update:model-value="changeColorPalette(layer.id)"
                             v-model="layer.choroplethScale"
-                            :options="['continuous', 'classified']"
-                            label="Choropleth scale type"
+                            :options="[
+                              { label: $t('continuous'), value: 'continuous' },
+                              { label: $t('classified'), value: 'classified' },
+                            ]"
+                            :label="$t('choropleth_scale_type')"
                           />
                         </div>
 
@@ -135,8 +140,11 @@
                               dense
                               outlined
                               v-model="layer.choroplethRangesMode"
-                              :options="rangesMode"
-                              label="Classification"
+                              :options="[
+                                { label: $t('equidistant'), value: 'e' },
+                                { label: $t('quantile'), value: 'q' },
+                              ]"
+                              :label="$t('classification')"
                               emit-value
                               map-options
                             />
@@ -153,7 +161,7 @@
                             outlined
                             v-model="layer.choroplethRanges"
                             :options="[2, 3, 4, 5, 6, 7, 8, 9, 10]"
-                            label="Classes"
+                            :label="$t('classes')"
                           />
                         </div>
 
@@ -167,7 +175,7 @@
                             outlined
                             v-model="layer.choroplethColorPalette"
                             :options="['OrRd', 'BuGn', 'YlOrBr']"
-                            label="Color palette"
+                            :label="$t('color_palette')"
                             emit-value
                             map-options
                           />
@@ -202,7 +210,7 @@
                         <div class="q-mb-sm">
                           <q-checkbox
                             v-model="layer.choroplethLabels"
-                            label="Labels"
+                            :label="$t('labels')"
                           />
                         </div>
 
@@ -384,10 +392,6 @@ export default {
 
   data() {
     return {
-      rangesMode: [
-        { label: "equidistant", value: "e" },
-        { label: "quantile", value: "q" },
-      ],
       collectionsAPI:
         "https://dggs-api-bozea3cspa-ew.a.run.app/dggs-api/collections",
       layersAll: staticLayers,

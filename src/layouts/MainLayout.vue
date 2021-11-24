@@ -12,7 +12,15 @@
           @click="leftDrawerOpen = !leftDrawerOpen"
         />
         <q-toolbar-title> DGGS web-GIS </q-toolbar-title>
-        <div>SPA</div>
+        <div class="q-pa-sm" style="min-width: 120px">
+          <q-select
+            emit-value
+            map-options
+            dense
+            v-model="locale"
+            :options="languages"
+          />
+        </div>
       </q-toolbar>
     </q-header>
 
@@ -32,7 +40,7 @@
           <q-item-section avatar>
             <q-icon name="info_outline" />
           </q-item-section>
-          <q-item-section>About project</q-item-section>
+          <q-item-section>{{ $t("about") }}</q-item-section>
         </q-item>
 
         <!-- page DGGS web-GIS link -->
@@ -75,13 +83,24 @@ export default {
 
   data() {
     return {
+      locale: this.$i18n.locale,
       leftDrawerOpen: false,
       color: "",
       link: "home",
+
+      languages: [
+        { label: "English", value: "en-US" },
+        { label: "Eesti", value: "ee" },
+      ],
     };
   },
 
   watch: {
+    // language changes
+    locale(newValue, oldValue) {
+      this.$i18n.locale = newValue;
+    },
+
     // watch for selected vector layers
     layersSelectedVector(newValue, oldValue) {
       this.addSelectedLayersVector(this.layersSelectedVector);
