@@ -18,17 +18,15 @@
     </div>
     <!-- map container -->
     <div id="openmap" ref="map-gis" class="map-container"></div>
-    <!-- footer copyright -->
-    <div class="text-body2 q-pt-sm text-right">
-      © Copyright 2021-{{ year }}
-      <a class="text-nodecoration" href="https://www.ut.ee/en"
-        >University of Tartu</a
-      >
-    </div>
+    <!-- page footer -->
+    <Footer />
   </div>
 </template>
 
 <script>
+import Footer from "components/Footer.vue";
+// openlayers
+// import { defaults } from "ol/interaction";
 import "ol/ol.css";
 import geojson2h3 from "geojson2h3";
 import { Map, View } from "ol";
@@ -42,7 +40,6 @@ import Feature from "ol/Feature";
 import Polygon from "ol/geom/Polygon";
 import { getArea, getDistance } from "ol/sphere";
 import { transformExtent } from "ol/proj";
-// import { defaults } from "ol/interaction";
 import {
   getBottomLeft,
   getBottomRight,
@@ -120,7 +117,7 @@ const styleHexagonsChoropleth = new Style({
 export default {
   name: "Map",
 
-  components: {},
+  components: { Footer },
 
   data() {
     return {
@@ -144,24 +141,12 @@ export default {
     },
 
     layersSelectedVectorComputed(newValue, oldValue) {
-      this.updateMap(this.map);
+      this.createMap();
     },
 
     layerSelectedDGGSComputed(newValue, oldValue) {
-      this.updateMap(this.map);
+      this.createMap();
     },
-
-    // mapZoom(newValue, oldValue) {
-    //   this.$store.commit("layers/SET_MAP_ZOOM", this.mapZoom);
-    //   this.$store.commit("layers/MAP_AREA", this.mapAreaComputed);
-    // },
-
-    // mapCenter(newValue, oldValue) {
-    //   let isEqual = newValue.toString() === oldValue.toString();
-    //   if (!isEqual) {
-    //     this.createMap();
-    //   }
-    // },
 
     mapZoomAndCenter: {
       handler(newValue, oldValue) {
@@ -339,7 +324,19 @@ export default {
                 const [key, value] = entry;
                 hexagon.properties[key] = value;
               });
-              hexagons.push(hexagon);
+
+              // filter features if choropleth parameter > 0
+              if (layer.choroplethParameter !== "") {
+                if (
+                  hexagon.properties[layer.choroplethParameter] > 0 &&
+                  hexagon.properties[layer.choroplethParameter] !== null
+                ) {
+                  hexagons.push(hexagon);
+                }
+              } else {
+                hexagons.push(hexagon);
+              }
+
               // select feature property
               choroplethValues.push(
                 featureFromAPI.properties[layer.choroplethParameter]
@@ -356,8 +353,15 @@ export default {
               });
             }
 
+            // sorted choropleth data (not zero value)
+            var choroplethValuesFiltered = choroplethValues.filter(function (
+              value
+            ) {
+              return value > 0;
+            });
+
             // sorted choropleth data
-            var choroplethValuesSorted = choroplethValues.sort();
+            var choroplethValuesSorted = choroplethValuesFiltered.sort();
 
             // choropleth continuous case
             // ==================================================================
@@ -651,12 +655,6 @@ export default {
     // DGGS layers
     layerSelectedDGGSComputed: function () {
       return this.$store.state.layers.layersSelectedDGGS;
-    },
-    // current year
-    year: function () {
-      const date = new Date();
-      let year = date.getFullYear();
-      return year;
     },
   },
 };

@@ -30,14 +30,18 @@
       of a spatial index, a DGG can assign unique identifiers to each grid cell,
       using it for spatial indexing purposes, in geodatabases or for geocoding.
     </div>
+    <!-- page footer -->
+    <Footer />
   </q-page>
 </template>
 
 <script>
+import Footer from "components/Footer.vue";
+
 export default {
   name: "About",
 
-  components: {},
+  components: { Footer },
 
   data() {
     return {};
