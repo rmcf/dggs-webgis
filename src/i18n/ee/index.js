@@ -28,4 +28,5 @@ export default {
   continuous: "pidev",
   quantile: "kvantiil",
   equidistant: "võrdsel kaugusel",
+  zero_values: "null väärtused",
 };

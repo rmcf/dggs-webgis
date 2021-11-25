@@ -28,4 +28,5 @@ export default {
   continuous: "continuous",
   quantile: "quantile",
   equidistant: "equidistant",
+  zero_values: "zero values",
 };

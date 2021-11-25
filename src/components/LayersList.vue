@@ -212,7 +212,7 @@
                             v-model="layer.choroplethParameterZeroValue"
                             checked-icon="check"
                             color="primary"
-                            label="zero values"
+                            :label="$t('zero_values')"
                             unchecked-icon="clear"
                           />
                         </div>
