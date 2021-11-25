@@ -326,7 +326,10 @@ export default {
               });
 
               // filter features if choropleth parameter > 0
-              if (layer.choroplethParameter !== "") {
+              if (
+                !layer.choroplethParameterZeroValue &&
+                layer.choroplethParameter !== ""
+              ) {
                 if (
                   hexagon.properties[layer.choroplethParameter] > 0 &&
                   hexagon.properties[layer.choroplethParameter] !== null

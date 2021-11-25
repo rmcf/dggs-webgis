@@ -206,6 +206,17 @@
                           />
                         </div>
 
+                        <!-- choropleth zero values -->
+                        <div class="q-mb-sm">
+                          <q-toggle
+                            v-model="layer.choroplethParameterZeroValue"
+                            checked-icon="check"
+                            color="primary"
+                            label="zero values"
+                            unchecked-icon="clear"
+                          />
+                        </div>
+
                         <!-- choropleth labels -->
                         <div class="q-mb-sm">
                           <q-checkbox
@@ -521,6 +532,7 @@ export default {
             layer.levels = [2, 3, 4, 5];
             layer.opacity = 0.7;
             layer.choroplethParameter = "";
+            layer.choroplethParameterZeroValue = true;
             layer.choroplethScale = "continuous"; // "continuous", "classified"
             layer.choroplethRanges = 5;
             layer.choroplethRangesMode = "q";
